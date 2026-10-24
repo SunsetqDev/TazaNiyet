@@ -6,10 +6,11 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "rea
 const GREEN = "#1F7A4D";
 
 export default function TaskScreen() {
-  const { title, points, emoji } = useLocalSearchParams<{
+  const { title, points, emoji, description } = useLocalSearchParams<{
     title: string;
     points: string;
     emoji: string;
+    description: string;
   }>();
   const router = useRouter();
   const [before, setBefore] = useState<string | null>(null);
@@ -45,12 +46,7 @@ export default function TaskScreen() {
       <Text style={styles.points}>+{points} TZ</Text>
 
       <Text style={styles.section}>Как выполнить</Text>
-      <Text style={styles.text}>
-        1. Сфотографируйте место ДО.{"\n"}
-        2. Выполните задание.{"\n"}
-        3. Сфотографируйте результат ПОСЛЕ.{"\n"}
-        4. Отправьте на проверку.
-      </Text>
+      <Text style={styles.text}>{description}</Text>
 
       <View style={styles.row}>
         <Pressable style={styles.photoBox} onPress={() => takePhoto(setBefore)}>
