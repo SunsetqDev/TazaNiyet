@@ -1,27 +1,51 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { supabase } from "../lib/supabase";
 
 const CITIES = ["Актобе", "Астана", "Алматы", "Шымкент"];
 
-const TASKS = [
-  { id: 1, emoji: "🧹", title: "Уборка во дворе", city: "Актобе", points: 20 },
-  { id: 2, emoji: "🌳", title: "Посади дерево", city: "Актобе", points: 80 },
-  { id: 3, emoji: "♻️", title: "Сдай пластик на переработку", city: "Актобе", points: 40 },
-  { id: 4, emoji: "💧", title: "Очисти берег реки Илек", city: "Актобе", points: 150 },
-  { id: 5, emoji: "🧹", title: "Уборка в парке", city: "Астана", points: 30 },
-  { id: 6, emoji: "🌳", title: "Озеленение школьного двора", city: "Астана", points: 90 },
-  { id: 7, emoji: "🏔", title: "Уборка тропы в горах", city: "Алматы", points: 120 },
-  { id: 8, emoji: "♻️", title: "Сбор макулатуры в школе", city: "Алматы", points: 50 },
-  { id: 9, emoji: "🌳", title: "Посади саженец", city: "Шымкент", points: 80 },
-  { id: 10, emoji: "🧹", title: "Уборка двора", city: "Шымкент", points: 20 },
-];
+type Task = {
+  id: number;
+  emoji: string;
+  title: string;
+  city: string;
+  points: number;
+};
 
 export default function HomeScreen() {
   const [city, setCity] = useState("Актобе");
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const tasks = TASKS.filter((t) => t.city === city);
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("city", city)
+        .order("points", { ascending: true });
+      if (error) {
+        setError("Ошибка: " + error.message);
+        setTasks([]);
+      } else {
+        setTasks(data as Task[]);
+      }
+      setLoading(false);
+    };
+    load();
+  }, [city]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -53,6 +77,12 @@ export default function HomeScreen() {
       </ScrollView>
 
       <Text style={styles.section}>Задания: {city}</Text>
+
+      {loading && <ActivityIndicator color={GREEN} style={{ marginTop: 20 }} />}
+      {error && <Text style={styles.error}>{error}</Text>}
+      {!loading && !error && tasks.length === 0 && (
+        <Text style={styles.small}>В этом городе пока нет заданий.</Text>
+      )}
 
       {tasks.map((t) => (
         <Pressable
@@ -92,6 +122,7 @@ const styles = StyleSheet.create({
   barFill: { width: "5%", height: 8, backgroundColor: "#F2C94C", borderRadius: 4 },
   cardSmall: { color: "#D8F0E2", fontSize: 12 },
   small: { color: "#7C8A82", fontSize: 12 },
+  error: { color: "#B3261E", fontSize: 14, marginTop: 8 },
   section: { fontSize: 20, fontWeight: "700", color: "#1C2B23", marginBottom: 12 },
   chip: {
     paddingHorizontal: 18,
