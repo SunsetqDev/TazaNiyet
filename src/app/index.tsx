@@ -140,6 +140,14 @@ export default function HomeScreen() {
       <Text style={styles.myBtnText}>🏅 Профиль, значки и рейтинг</Text>
       </Pressable>
 
+      <Pressable style={styles.myBtn} onPress={() => router.push("/universities")}>
+      <Text style={styles.myBtnText}>🎓 Вузы и колледжи</Text>
+      </Pressable>
+
+      <Pressable style={styles.myBtn} onPress={() => router.push("/portfolio")}>
+      <Text style={styles.myBtnText}>📄 Моё портфолио (QR)</Text>
+      </Pressable>
+
       {isMod && (
         <Pressable style={styles.myBtn} onPress={() => router.push("/moderator")}>
           <Text style={styles.myBtnText}>🛡 Проверка заданий (модератор)</Text>
