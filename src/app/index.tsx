@@ -136,6 +136,10 @@ export default function HomeScreen() {
         <Text style={styles.myBtnText}>📋 Мои задания и статусы</Text>
       </Pressable>
 
+      <Pressable style={styles.myBtn} onPress={() => router.push("/profile")}>
+      <Text style={styles.myBtnText}>🏅 Профиль, значки и рейтинг</Text>
+      </Pressable>
+
       {isMod && (
         <Pressable style={styles.myBtn} onPress={() => router.push("/moderator")}>
           <Text style={styles.myBtnText}>🛡 Проверка заданий (модератор)</Text>
