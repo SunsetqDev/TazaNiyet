@@ -26,7 +26,6 @@ function getRank(points: number) {
   return rank;
 }
 
-// Какие задания показывать для каждого типа места
 const TYPES_FOR: Record<string, string[]> = {
   city: ["any", "city"],
   town: ["any", "city", "village"],
@@ -44,6 +43,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMod, setIsMod] = useState(false);
+  const [needConsent, setNeedConsent] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -55,10 +55,14 @@ export default function HomeScreen() {
       }
       const { data } = await supabase
         .from("profiles")
-        .select("name, points, region, place_name, place_type, is_moderator")
+        .select("name, points, region, place_name, place_type, is_moderator, birth_year, parent_verified")
         .eq("id", user.id)
         .single();
-      if (!data || !data.region || !data.place_type) {
+      if (!data || !data.birth_year) {
+        router.replace("/safety");
+        return;
+      }
+      if (!data.region || !data.place_type) {
         router.replace("/place");
         return;
       }
@@ -68,6 +72,8 @@ export default function HomeScreen() {
       setPlaceName(data.place_name ?? "");
       setPlaceType(data.place_type);
       setIsMod(data.is_moderator === true);
+      const age = new Date().getFullYear() - data.birth_year;
+      setNeedConsent(age <= 14 && !data.parent_verified);
     };
     loadProfile();
   }, []);
@@ -113,6 +119,15 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
+      {needConsent && (
+        <View style={styles.warn}>
+          <Text style={styles.warnTitle}>Ждём согласие родителей</Text>
+          <Text style={styles.warnText}>
+            Пока согласие не подтверждено проверяющим, отправлять задания нельзя. Попросите родителя связаться с учителем или проверяющим.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.card}>
         <Text style={styles.rank}>{rank.name}</Text>
         <Text style={styles.points}>{points} TZ</Text>
@@ -137,15 +152,19 @@ export default function HomeScreen() {
       </Pressable>
 
       <Pressable style={styles.myBtn} onPress={() => router.push("/profile")}>
-      <Text style={styles.myBtnText}>🏅 Профиль, значки и рейтинг</Text>
+        <Text style={styles.myBtnText}>🏅 Профиль, значки и рейтинг</Text>
       </Pressable>
 
       <Pressable style={styles.myBtn} onPress={() => router.push("/universities")}>
-      <Text style={styles.myBtnText}>🎓 Вузы и колледжи</Text>
+        <Text style={styles.myBtnText}>🎓 Вузы и колледжи</Text>
       </Pressable>
 
       <Pressable style={styles.myBtn} onPress={() => router.push("/portfolio")}>
-      <Text style={styles.myBtnText}>📄 Моё портфолио (QR)</Text>
+        <Text style={styles.myBtnText}>📄 Моё портфолио (QR)</Text>
+      </Pressable>
+
+      <Pressable style={styles.myBtn} onPress={() => router.push("/settings")}>
+        <Text style={styles.myBtnText}>⚙️ Настройки и конфиденциальность</Text>
       </Pressable>
 
       {isMod && (
@@ -199,6 +218,9 @@ const styles = StyleSheet.create({
   logo: { fontSize: 32, fontWeight: "800", color: GREEN },
   subtitle: { fontSize: 14, color: "#5B6B62", marginTop: 4 },
   signOut: { color: "#B3261E", fontWeight: "600" },
+  warn: { backgroundColor: "#FFF6D6", borderRadius: 16, padding: 16, marginBottom: 16 },
+  warnTitle: { color: "#8A6D00", fontWeight: "800", fontSize: 16, marginBottom: 4 },
+  warnText: { color: "#5B4A00", lineHeight: 20 },
   card: { backgroundColor: GREEN, borderRadius: 20, padding: 20, marginBottom: 16 },
   rank: { color: "#D8F0E2", fontSize: 16 },
   points: { color: "white", fontSize: 40, fontWeight: "800", marginVertical: 6 },
