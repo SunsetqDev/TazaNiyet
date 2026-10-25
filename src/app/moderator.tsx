@@ -1,6 +1,14 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+    ActivityIndicator, Alert,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text, TextInput,
+    View,
+} from "react-native";
 import { supabase } from "../lib/supabase";
 
 const GREEN = "#1F7A4D";
@@ -18,6 +26,8 @@ export default function ModeratorScreen() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  const [email, setEmail] = useState("");
+  const [consentBusy, setConsentBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,12 +76,84 @@ export default function ModeratorScreen() {
     load();
   };
 
+  const fraud = (it: Item) => {
+    const penalty = it.tasks?.points ?? 0;
+    Alert.alert(
+      "Пометить как обман?",
+      `Заявка будет отклонена, у пользователя снимется ${penalty} TZ.`,
+      [
+        { text: "Отмена", style: "cancel" },
+        {
+          text: "Обман",
+          style: "destructive",
+          onPress: async () => {
+            setBusy(it.id);
+            const { data, error } = await supabase.rpc("penalize_submission", {
+              sub_id: it.id,
+              penalty,
+            });
+            setBusy(null);
+            if (error) {
+              Alert.alert("Ошибка", error.message);
+              return;
+            }
+            Alert.alert("Результат", String(data));
+            load();
+          },
+        },
+      ]
+    );
+  };
+
+  const confirmConsent = async () => {
+    if (!email.trim()) {
+      Alert.alert("Введите почту ребёнка");
+      return;
+    }
+    setConsentBusy(true);
+    const { data, error } = await supabase.rpc("confirm_parent_consent", { p_email: email.trim() });
+    setConsentBusy(false);
+    if (error) {
+      Alert.alert("Ошибка", error.message);
+      return;
+    }
+    Alert.alert("Результат", String(data));
+    if (data === "Согласие подтверждено") setEmail("");
+  };
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Pressable onPress={() => router.back()}>
         <Text style={styles.back}>← Назад</Text>
       </Pressable>
       <Text style={styles.title}>Проверка заданий</Text>
+
+      <View style={styles.consent}>
+        <Text style={styles.consentTitle}>Согласие родителей</Text>
+        <Text style={styles.consentText}>
+          Подтверждайте только после того, как связались с родителем или получили бумажное согласие.
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Почта ребёнка (из регистрации)"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <Pressable style={styles.consentBtn} onPress={confirmConsent} disabled={consentBusy}>
+          {consentBusy ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.yesText}>Подтвердить согласие</Text>
+          )}
+        </Pressable>
+      </View>
+
       <Text style={styles.sub}>Ожидают проверки: {items.length}</Text>
 
       {loading && <ActivityIndicator color={GREEN} style={{ marginTop: 20 }} />}
@@ -103,6 +185,9 @@ export default function ModeratorScreen() {
               <Text style={styles.yesText}>Принять</Text>
             </Pressable>
           </View>
+          <Pressable style={styles.fraudBtn} disabled={busy === it.id} onPress={() => fraud(it)}>
+            <Text style={styles.fraudText}>⚠️ Обман (отклонить и снять очки)</Text>
+          </Pressable>
         </View>
       ))}
     </ScrollView>
@@ -111,10 +196,15 @@ export default function ModeratorScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F6F3EA" },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+  content: { padding: 20, paddingTop: 60, paddingBottom: 50 },
   back: { color: GREEN, fontSize: 16, fontWeight: "600", marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: "800", color: "#1C2B23" },
-  sub: { color: "#5B6B62", marginBottom: 16, marginTop: 4 },
+  title: { fontSize: 28, fontWeight: "800", color: "#1C2B23", marginBottom: 16 },
+  consent: { backgroundColor: "#FFF6D6", borderRadius: 16, padding: 16, marginBottom: 20 },
+  consentTitle: { fontSize: 16, fontWeight: "800", color: "#8A6D00" },
+  consentText: { color: "#5B4A00", marginVertical: 8, lineHeight: 20 },
+  input: { backgroundColor: "white", borderRadius: 12, padding: 14, fontSize: 15, borderWidth: 1, borderColor: "#E6DDB0", marginBottom: 10 },
+  consentBtn: { backgroundColor: GREEN, borderRadius: 12, padding: 14, alignItems: "center" },
+  sub: { color: "#5B6B62", marginBottom: 12 },
   empty: { color: "#7C8A82", marginTop: 12 },
   card: { backgroundColor: "white", borderRadius: 16, padding: 16, marginBottom: 14 },
   cardTitle: { fontSize: 16, fontWeight: "700", color: "#1C2B23" },
@@ -126,6 +216,8 @@ const styles = StyleSheet.create({
   btn: { flex: 1, borderRadius: 12, padding: 14, alignItems: "center" },
   yes: { backgroundColor: GREEN },
   yesText: { color: "white", fontWeight: "700" },
-  no: { backgroundColor: "#FCE8E6" },
-  noText: { color: "#B3261E", fontWeight: "700" },
+  no: { backgroundColor: "#EEF2EF" },
+  noText: { color: "#3F4F46", fontWeight: "700" },
+  fraudBtn: { backgroundColor: "#FCE8E6", borderRadius: 12, padding: 12, alignItems: "center", marginTop: 10 },
+  fraudText: { color: "#B3261E", fontWeight: "700" },
 });

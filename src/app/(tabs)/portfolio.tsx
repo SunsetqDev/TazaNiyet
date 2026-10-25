@@ -2,7 +2,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 
 const GREEN = "#1F7A4D";
 
