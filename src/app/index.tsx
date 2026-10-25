@@ -3,7 +3,14 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { supabase } from "../lib/supabase";
 
-type Task = { id: number; emoji: string; title: string; description: string; place_type: string; points: number };
+type Task = {
+  id: number;
+  emoji: string;
+  title: string;
+  description: string;
+  place_type: string;
+  points: number;
+};
 
 const RANKS = [
   { min: 0, name: "🌱 Росток", next: 100 },
@@ -123,6 +130,10 @@ export default function HomeScreen() {
         <Text style={styles.change}>Изменить</Text>
       </Pressable>
 
+      <Pressable style={styles.myBtn} onPress={() => router.push("/my")}>
+        <Text style={styles.myBtnText}>📋 Мои задания и статусы</Text>
+      </Pressable>
+
       <Text style={styles.section}>Задания рядом с вами</Text>
 
       {loading && <ActivityIndicator color={GREEN} style={{ marginTop: 20 }} />}
@@ -135,7 +146,13 @@ export default function HomeScreen() {
           onPress={() =>
             router.push({
               pathname: "/task",
-             params: { id: String(t.id), title: t.title, points: String(t.points), emoji: t.emoji, description: t.description },
+              params: {
+                id: String(t.id),
+                title: t.title,
+                points: String(t.points),
+                emoji: t.emoji,
+                description: t.description,
+              },
             })
           }
         >
@@ -168,9 +185,11 @@ const styles = StyleSheet.create({
   bar: { height: 8, backgroundColor: "#3E9468", borderRadius: 4, marginBottom: 8 },
   barFill: { height: 8, backgroundColor: "#F2C94C", borderRadius: 4 },
   cardSmall: { color: "#D8F0E2", fontSize: 12 },
-  place: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 16, padding: 14, marginBottom: 20 },
+  place: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 16, padding: 14, marginBottom: 12 },
   placeTitle: { fontSize: 16, fontWeight: "700", color: "#1C2B23" },
   change: { color: GREEN, fontWeight: "700" },
+  myBtn: { backgroundColor: "white", borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 2, borderColor: GREEN },
+  myBtnText: { color: GREEN, fontWeight: "700", fontSize: 16, textAlign: "center" },
   small: { color: "#7C8A82", fontSize: 12 },
   error: { color: "#B3261E", fontSize: 14, marginTop: 8 },
   section: { fontSize: 20, fontWeight: "700", color: "#1C2B23", marginBottom: 12 },
