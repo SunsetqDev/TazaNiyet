@@ -43,6 +43,7 @@ export default function HomeScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMod, setIsMod] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -54,7 +55,7 @@ export default function HomeScreen() {
       }
       const { data } = await supabase
         .from("profiles")
-        .select("name, points, region, place_name, place_type")
+        .select("name, points, region, place_name, place_type, is_moderator")
         .eq("id", user.id)
         .single();
       if (!data || !data.region || !data.place_type) {
@@ -66,6 +67,7 @@ export default function HomeScreen() {
       setRegion(data.region);
       setPlaceName(data.place_name ?? "");
       setPlaceType(data.place_type);
+      setIsMod(data.is_moderator === true);
     };
     loadProfile();
   }, []);
@@ -134,6 +136,12 @@ export default function HomeScreen() {
         <Text style={styles.myBtnText}>📋 Мои задания и статусы</Text>
       </Pressable>
 
+      {isMod && (
+        <Pressable style={styles.myBtn} onPress={() => router.push("/moderator")}>
+          <Text style={styles.myBtnText}>🛡 Проверка заданий (модератор)</Text>
+        </Pressable>
+      )}
+
       <Text style={styles.section}>Задания рядом с вами</Text>
 
       {loading && <ActivityIndicator color={GREEN} style={{ marginTop: 20 }} />}
@@ -188,11 +196,11 @@ const styles = StyleSheet.create({
   place: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 16, padding: 14, marginBottom: 12 },
   placeTitle: { fontSize: 16, fontWeight: "700", color: "#1C2B23" },
   change: { color: GREEN, fontWeight: "700" },
-  myBtn: { backgroundColor: "white", borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 2, borderColor: GREEN },
+  myBtn: { backgroundColor: "white", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 2, borderColor: GREEN },
   myBtnText: { color: GREEN, fontWeight: "700", fontSize: 16, textAlign: "center" },
   small: { color: "#7C8A82", fontSize: 12 },
   error: { color: "#B3261E", fontSize: 14, marginTop: 8 },
-  section: { fontSize: 20, fontWeight: "700", color: "#1C2B23", marginBottom: 12 },
+  section: { fontSize: 20, fontWeight: "700", color: "#1C2B23", marginTop: 8, marginBottom: 12 },
   task: { flexDirection: "row", alignItems: "center", backgroundColor: "white", borderRadius: 16, padding: 16, marginBottom: 10, gap: 12 },
   emoji: { fontSize: 28 },
   taskTitle: { fontSize: 16, fontWeight: "600", color: "#1C2B23" },
