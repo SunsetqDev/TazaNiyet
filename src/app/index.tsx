@@ -135,7 +135,7 @@ export default function HomeScreen() {
           onPress={() =>
             router.push({
               pathname: "/task",
-              params: { title: t.title, points: String(t.points), emoji: t.emoji, description: t.description },
+             params: { id: String(t.id), title: t.title, points: String(t.points), emoji: t.emoji, description: t.description },
             })
           }
         >

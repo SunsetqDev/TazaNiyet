@@ -1,38 +1,90 @@
+import { decode } from "base64-arraybuffer";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { supabase } from "../lib/supabase";
 
 const GREEN = "#1F7A4D";
 
+type Photo = { uri: string; base64: string };
+
 export default function TaskScreen() {
-  const { title, points, emoji, description } = useLocalSearchParams<{
+  const { id, title, points, emoji, description } = useLocalSearchParams<{
+    id: string;
     title: string;
     points: string;
     emoji: string;
     description: string;
   }>();
   const router = useRouter();
-  const [before, setBefore] = useState<string | null>(null);
-  const [after, setAfter] = useState<string | null>(null);
+  const [before, setBefore] = useState<Photo | null>(null);
+  const [after, setAfter] = useState<Photo | null>(null);
+  const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const takePhoto = async (setter: (uri: string) => void) => {
+  const takePhoto = async (setter: (p: Photo) => void) => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       Alert.alert("Нужен доступ к камере", "Разрешите камеру в настройках телефона.");
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-    if (!result.canceled) setter(result.assets[0].uri);
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset.base64 || asset.base64.length < 1000) {
+      Alert.alert("Фото не получилось", "Сделайте фото ещё раз.");
+      return;
+    }
+    setter({ uri: asset.uri, base64: asset.base64 });
   };
 
-  const submit = () => {
+  const uploadPhoto = async (photo: Photo, userId: string, label: string) => {
+    const path = `${userId}/${Date.now()}-${label}.jpg`;
+    const bytes = decode(photo.base64);
+    if (bytes.byteLength < 1000) {
+      throw new Error("Фото пустое. Сделайте его заново.");
+    }
+    const { error } = await supabase.storage
+      .from("submissions")
+      .upload(path, bytes, { contentType: "image/jpeg" });
+    if (error) throw error;
+    return path;
+  };
+
+  const submit = async () => {
     if (!before || !after) {
       Alert.alert("Нужны оба фото", "Сделайте фото «до» и «после».");
       return;
     }
-    setSent(true);
+    setSending(true);
+    try {
+      const { data: s } = await supabase.auth.getSession();
+      const user = s.session?.user;
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+      const beforePath = await uploadPhoto(before, user.id, "before");
+      const afterPath = await uploadPhoto(after, user.id, "after");
+      const { error } = await supabase.from("submissions").insert({
+        task_id: Number(id),
+        before_path: beforePath,
+        after_path: afterPath,
+      });
+      if (error) {
+        if (error.code === "23505") {
+          Alert.alert("Уже отправлено", "Это задание уже на проверке. Дождитесь результата.");
+          return;
+        }
+        throw error;
+      }
+      setSent(true);
+    } catch (e: any) {
+      Alert.alert("Не удалось отправить", e?.message ?? "Проверьте интернет и попробуйте снова.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -49,16 +101,16 @@ export default function TaskScreen() {
       <Text style={styles.text}>{description}</Text>
 
       <View style={styles.row}>
-        <Pressable style={styles.photoBox} onPress={() => takePhoto(setBefore)}>
+        <Pressable style={styles.photoBox} onPress={() => takePhoto(setBefore)} disabled={sent}>
           {before ? (
-            <Image source={{ uri: before }} style={styles.photo} />
+            <Image source={{ uri: before.uri }} style={styles.photo} />
           ) : (
             <Text style={styles.photoText}>📷{"\n"}Фото ДО</Text>
           )}
         </Pressable>
-        <Pressable style={styles.photoBox} onPress={() => takePhoto(setAfter)}>
+        <Pressable style={styles.photoBox} onPress={() => takePhoto(setAfter)} disabled={sent}>
           {after ? (
-            <Image source={{ uri: after }} style={styles.photo} />
+            <Image source={{ uri: after.uri }} style={styles.photo} />
           ) : (
             <Text style={styles.photoText}>📷{"\n"}Фото ПОСЛЕ</Text>
           )}
@@ -69,10 +121,17 @@ export default function TaskScreen() {
         <View style={styles.success}>
           <Text style={styles.successText}>✓ Отправлено на проверку</Text>
           <Text style={styles.successSmall}>Очки TZ появятся после проверки.</Text>
+          <Pressable onPress={() => router.replace("/")}>
+            <Text style={styles.link}>К заданиям</Text>
+          </Pressable>
         </View>
       ) : (
-        <Pressable style={styles.button} onPress={submit}>
-          <Text style={styles.buttonText}>Отправить на проверку</Text>
+        <Pressable style={styles.button} onPress={submit} disabled={sending}>
+          {sending ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.buttonText}>Отправить на проверку</Text>
+          )}
         </Pressable>
       )}
     </ScrollView>
@@ -108,4 +167,5 @@ const styles = StyleSheet.create({
   success: { backgroundColor: "#EAF6EF", borderRadius: 16, padding: 18, alignItems: "center" },
   successText: { color: GREEN, fontSize: 17, fontWeight: "800" },
   successSmall: { color: "#5B6B62", marginTop: 4 },
+  link: { color: GREEN, fontWeight: "700", marginTop: 14 },
 });
