@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Avatar } from "../../components/avatar";
 import { supabase } from "../../lib/supabase";
 import { C, R, S } from "../../lib/theme";
 
@@ -19,6 +20,9 @@ function calcStreak(dates: string[]) {
 export default function ProfileScreen() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [nickname, setNickname] = useState<string | null>(null);
+  const [emoji, setEmoji] = useState<string | null>(null);
+  const [color, setColor] = useState<string | null>(null);
   const [points, setPoints] = useState(0);
   const [approved, setApproved] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -35,13 +39,20 @@ export default function ProfileScreen() {
         }
         const { data: p } = await supabase
           .from("profiles")
-          .select("name, points, is_moderator")
+          .select("name, nickname, avatar_emoji, avatar_color, points, is_moderator")
           .eq("id", user.id)
           .single();
         setName(p?.name ?? "");
+        setNickname(p?.nickname ?? null);
+        setEmoji(p?.avatar_emoji ?? null);
+        setColor(p?.avatar_color ?? null);
         setPoints(p?.points ?? 0);
         setIsMod(p?.is_moderator === true);
-        const { data: subs } = await supabase.from("submissions").select("created_at").eq("status", "approved");
+        const { data: subs } = await supabase
+          .from("submissions")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .eq("status", "approved");
         const list = (subs ?? []).map((x: any) => x.created_at as string);
         setApproved(list.length);
         setStreak(calcStreak(list));
@@ -83,10 +94,15 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-      <View style={s.avatar}>
-        <Text style={s.avatarText}>{(name || "?").charAt(0).toUpperCase()}</Text>
+      <View style={s.avatarWrap}>
+        <Avatar name={nickname || name} emoji={emoji} color={color} size={96} />
       </View>
-      <Text style={s.name}>{name || "Мой профиль"}</Text>
+      <Text style={s.name}>{nickname || name || "Мой профиль"}</Text>
+      {nickname && name ? <Text style={s.realName}>{name}</Text> : null}
+
+      <Pressable style={s.editBtn} onPress={() => router.push("/edit-profile")}>
+        <Text style={s.editText}>✏️ Изменить профиль</Text>
+      </Pressable>
 
       <View style={s.stats}>
         <View style={s.stat}>
@@ -125,9 +141,11 @@ export default function ProfileScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   content: { padding: S.md + 4, paddingTop: 70, paddingBottom: S.xl + 20 },
-  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: C.sage, alignItems: "center", justifyContent: "center", alignSelf: "center" },
-  avatarText: { fontSize: 36, fontWeight: "700", color: C.text },
-  name: { fontSize: 26, fontWeight: "700", color: C.text, textAlign: "center", marginTop: S.sm, marginBottom: S.lg },
+  avatarWrap: { alignSelf: "center" },
+  name: { fontSize: 26, fontWeight: "700", color: C.text, textAlign: "center", marginTop: S.sm },
+  realName: { fontSize: 13, color: C.muted, textAlign: "center", marginTop: 2 },
+  editBtn: { alignSelf: "center", backgroundColor: C.sageSoft, borderRadius: R.chip, paddingHorizontal: 18, paddingVertical: 10, marginTop: S.sm + 2, marginBottom: S.lg },
+  editText: { color: C.sageDark, fontWeight: "700" },
   stats: { flexDirection: "row", gap: S.sm, marginBottom: S.xl },
   stat: { flex: 1, backgroundColor: C.sageSoft, borderRadius: R.card, padding: S.md - 4, alignItems: "center" },
   statNum: { fontSize: 24, fontWeight: "800", color: C.sageDark },

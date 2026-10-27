@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Avatar } from "../../components/avatar";
+import { PetCard } from "../../components/pet-card";
 import { supabase } from "../../lib/supabase";
 import { C, R, S } from "../../lib/theme";
 
@@ -13,20 +15,6 @@ type Task = {
   points: number;
   category: string;
 };
-
-const RANKS = [
-  { min: 0, name: "Росток", icon: "🌱", next: 100 },
-  { min: 100, name: "Побег", icon: "🌿", next: 500 },
-  { min: 500, name: "Дерево", icon: "🌳", next: 1500 },
-  { min: 1500, name: "Страж природы", icon: "🏔", next: 5000 },
-  { min: 5000, name: "Хранитель степи", icon: "🦅", next: null },
-];
-
-function getRank(points: number) {
-  let rank = RANKS[0];
-  for (const r of RANKS) if (points >= r.min) rank = r;
-  return rank;
-}
 
 const TYPES_FOR: Record<string, string[]> = {
   city: ["any", "city"],
@@ -69,6 +57,11 @@ function calcStreak(dates: string[]) {
 export default function TasksScreen() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [look, setLook] = useState<{ nickname: string | null; emoji: string | null; color: string | null }>({
+    nickname: null,
+    emoji: null,
+    color: null,
+  });
   const [points, setPoints] = useState(0);
   const [region, setRegion] = useState("");
   const [placeName, setPlaceName] = useState("");
@@ -80,6 +73,7 @@ export default function TasksScreen() {
   const [cat, setCat] = useState("all");
   const [streak, setStreak] = useState(0);
   const [done, setDone] = useState(0);
+  const [daysSince, setDaysSince] = useState<number | null>(null);
   const [stats, setStats] = useState<{ done: number; people: number } | null>(null);
 
   useEffect(() => {
@@ -92,7 +86,7 @@ export default function TasksScreen() {
       }
       const { data } = await supabase
         .from("profiles")
-        .select("name, points, region, place_name, place_type, birth_year, parent_verified")
+        .select("name, nickname, avatar_emoji, avatar_color, points, region, place_name, place_type, birth_year, parent_verified")
         .eq("id", user.id)
         .single();
       if (!data || !data.birth_year) {
@@ -104,6 +98,11 @@ export default function TasksScreen() {
         return;
       }
       setName(data.name ?? "");
+      setLook({
+        nickname: data.nickname ?? null,
+        emoji: data.avatar_emoji ?? null,
+        color: data.avatar_color ?? null,
+      });
       setPoints(data.points ?? 0);
       setRegion(data.region);
       setPlaceName(data.place_name ?? "");
@@ -111,10 +110,24 @@ export default function TasksScreen() {
       const age = new Date().getFullYear() - data.birth_year;
       setNeedConsent(age <= 14 && !data.parent_verified);
 
-      const { data: subs } = await supabase.from("submissions").select("created_at").eq("status", "approved");
-      const list = (subs ?? []).map((x: any) => x.created_at as string);
-      setDone(list.length);
-      setStreak(calcStreak(list));
+      // approved и pending считаем активностью: баобаб оживает сразу после отправки задания
+      const { data: subs } = await supabase
+        .from("submissions")
+        .select("created_at, status")
+        .eq("user_id", user.id)
+        .in("status", ["approved", "pending"]);
+      const all = (subs ?? []) as { created_at: string; status: string }[];
+      setDone(all.filter((x) => x.status === "approved").length);
+      setStreak(calcStreak(all.map((x) => x.created_at)));
+      if (all.length > 0) {
+        const last = new Date(Math.max(...all.map((x) => new Date(x.created_at).getTime())));
+        last.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        setDaysSince(Math.round((today.getTime() - last.getTime()) / 86400000));
+      } else {
+        setDaysSince(null);
+      }
 
       const { data: st } = await supabase.rpc("get_community_stats");
       if (st) setStats(st as { done: number; people: number });
@@ -149,8 +162,6 @@ export default function TasksScreen() {
       params: { id: String(t.id), title: t.title, points: String(t.points), emoji: t.emoji, description: t.description },
     });
 
-  const rank = getRank(points);
-  const progress = rank.next ? Math.min(100, ((points - rank.min) / (rank.next - rank.min)) * 100) : 100;
   const dayIndex = Math.floor(Date.now() / 86400000);
   const taskOfDay = tasks.length > 0 ? tasks[dayIndex % tasks.length] : null;
   const tip = TIPS[dayIndex % TIPS.length];
@@ -161,14 +172,14 @@ export default function TasksScreen() {
     <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
       <View style={s.top}>
         <View style={{ flex: 1 }}>
-          <Text style={s.hello}>Привет, {name || "друг"}!</Text>
+          <Text style={s.hello}>Привет, {look.nickname || name || "друг"}!</Text>
           <Pressable onPress={() => router.push("/place")}>
             <Text style={s.place}>📍 {placeName || region}  ·  изменить</Text>
           </Pressable>
         </View>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>{(name || "?").charAt(0).toUpperCase()}</Text>
-        </View>
+        <Pressable onPress={() => router.push("/edit-profile")}>
+          <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} size={52} />
+        </Pressable>
       </View>
 
       {needConsent && (
@@ -178,18 +189,7 @@ export default function TasksScreen() {
         </View>
       )}
 
-      <View style={s.strip}>
-        <Text style={s.stripIcon}>{rank.icon}</Text>
-        <View style={{ flex: 1 }}>
-          <View style={s.stripRow}>
-            <Text style={s.stripRank}>{rank.name}</Text>
-            <Text style={s.stripPts}>{points} TZ</Text>
-          </View>
-          <View style={s.bar}>
-            <View style={[s.barFill, { width: `${progress}%` }]} />
-          </View>
-        </View>
-      </View>
+      <PetCard points={points} streak={streak} daysSince={daysSince} />
 
       <View style={s.miniRow}>
         <View style={s.mini}>
@@ -273,18 +273,9 @@ const s = StyleSheet.create({
   top: { flexDirection: "row", alignItems: "center", marginBottom: S.lg },
   hello: { fontSize: 28, fontWeight: "700", color: C.text },
   place: { color: C.muted, marginTop: 6 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: C.sage, alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 22, fontWeight: "700", color: C.text },
   warn: { backgroundColor: C.warnSoft, borderRadius: R.card, padding: S.md, marginBottom: S.md },
   warnTitle: { color: C.warn, fontWeight: "700", fontSize: 16, marginBottom: 6 },
   warnText: { color: C.warn, lineHeight: 21 },
-  strip: { flexDirection: "row", alignItems: "center", gap: S.md - 4, backgroundColor: C.card, borderRadius: R.card, padding: S.md, marginBottom: S.sm + 2 },
-  stripIcon: { fontSize: 32 },
-  stripRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  stripRank: { fontWeight: "700", color: C.text, fontSize: 15 },
-  stripPts: { fontWeight: "800", color: C.sageDark },
-  bar: { height: 6, backgroundColor: C.sageSoft, borderRadius: 3 },
-  barFill: { height: 6, backgroundColor: C.sage, borderRadius: 3 },
   miniRow: { flexDirection: "row", gap: S.sm + 2, marginBottom: S.lg },
   mini: { flex: 1, backgroundColor: C.card, borderRadius: R.card, padding: S.md - 4, alignItems: "center" },
   miniNum: { fontSize: 20, fontWeight: "800", color: C.text },

@@ -1,17 +1,26 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator, Alert,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text, TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 
 const GREEN = "#1F7A4D";
+
+const REASONS = [
+  "Фото «после» не показывает результат",
+  "Фото размытое или тёмное",
+  "Фото не по заданию",
+  "Нет фото «до» или «после»",
+];
 
 type Item = {
   id: number;
@@ -28,6 +37,8 @@ export default function ModeratorScreen() {
   const [busy, setBusy] = useState<number | null>(null);
   const [email, setEmail] = useState("");
   const [consentBusy, setConsentBusy] = useState(false);
+  const [rejectFor, setRejectFor] = useState<number | null>(null);
+  const [customReason, setCustomReason] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,14 +75,20 @@ export default function ModeratorScreen() {
     }, [load])
   );
 
-  const review = async (id: number, approve: boolean) => {
+  const review = async (id: number, approve: boolean, reason?: string) => {
     setBusy(id);
-    const { data, error } = await supabase.rpc("review_submission", { sub_id: id, approve });
+    const { data, error } = await supabase.rpc("review_submission", {
+      sub_id: id,
+      approve,
+      reason: reason ?? null,
+    });
     setBusy(null);
     if (error) {
       Alert.alert("Ошибка", error.message);
       return;
     }
+    setRejectFor(null);
+    setCustomReason("");
     Alert.alert("Результат", String(data));
     load();
   };
@@ -177,14 +194,53 @@ export default function ModeratorScreen() {
               {it.afterUrl && <Image source={{ uri: it.afterUrl }} style={styles.photo} />}
             </View>
           </View>
+
           <View style={styles.row}>
-            <Pressable style={[styles.btn, styles.no]} disabled={busy === it.id} onPress={() => review(it.id, false)}>
-              <Text style={styles.noText}>Отклонить</Text>
+            <Pressable
+              style={[styles.btn, styles.no]}
+              disabled={busy === it.id}
+              onPress={() => {
+                setCustomReason("");
+                setRejectFor(rejectFor === it.id ? null : it.id);
+              }}
+            >
+              <Text style={styles.noText}>{rejectFor === it.id ? "Отмена" : "Отклонить"}</Text>
             </Pressable>
             <Pressable style={[styles.btn, styles.yes]} disabled={busy === it.id} onPress={() => review(it.id, true)}>
               <Text style={styles.yesText}>Принять</Text>
             </Pressable>
           </View>
+
+          {rejectFor === it.id && (
+            <View style={styles.rejectBox}>
+              <Text style={styles.label}>ПРИЧИНА ОТКАЗА (её увидит пользователь)</Text>
+              {REASONS.map((r) => (
+                <Pressable
+                  key={r}
+                  style={styles.reasonChip}
+                  disabled={busy === it.id}
+                  onPress={() => review(it.id, false, r)}
+                >
+                  <Text style={styles.reasonChipText}>{r}</Text>
+                </Pressable>
+              ))}
+              <TextInput
+                style={styles.input}
+                placeholder="Или напишите свою причину"
+                value={customReason}
+                onChangeText={setCustomReason}
+                multiline
+              />
+              <Pressable
+                style={[styles.btn, styles.yes, !customReason.trim() && { opacity: 0.4 }]}
+                disabled={busy === it.id || !customReason.trim()}
+                onPress={() => review(it.id, false, customReason)}
+              >
+                <Text style={styles.yesText}>Отклонить с этой причиной</Text>
+              </Pressable>
+            </View>
+          )}
+
           <Pressable style={styles.fraudBtn} disabled={busy === it.id} onPress={() => fraud(it)}>
             <Text style={styles.fraudText}>⚠️ Обман (отклонить и снять очки)</Text>
           </Pressable>
@@ -202,7 +258,15 @@ const styles = StyleSheet.create({
   consent: { backgroundColor: "#FFF6D6", borderRadius: 16, padding: 16, marginBottom: 20 },
   consentTitle: { fontSize: 16, fontWeight: "800", color: "#8A6D00" },
   consentText: { color: "#5B4A00", marginVertical: 8, lineHeight: 20 },
-  input: { backgroundColor: "white", borderRadius: 12, padding: 14, fontSize: 15, borderWidth: 1, borderColor: "#E6DDB0", marginBottom: 10 },
+  input: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: "#E6DDB0",
+    marginBottom: 10,
+  },
   consentBtn: { backgroundColor: GREEN, borderRadius: 12, padding: 14, alignItems: "center" },
   sub: { color: "#5B6B62", marginBottom: 12 },
   empty: { color: "#7C8A82", marginTop: 12 },
@@ -218,6 +282,9 @@ const styles = StyleSheet.create({
   yesText: { color: "white", fontWeight: "700" },
   no: { backgroundColor: "#EEF2EF" },
   noText: { color: "#3F4F46", fontWeight: "700" },
+  rejectBox: { backgroundColor: "#FCE8E6", borderRadius: 12, padding: 12, marginTop: 10 },
+  reasonChip: { backgroundColor: "white", borderRadius: 10, padding: 12, marginBottom: 8 },
+  reasonChipText: { color: "#1C2B23", fontWeight: "600" },
   fraudBtn: { backgroundColor: "#FCE8E6", borderRadius: 12, padding: 12, alignItems: "center", marginTop: 10 },
   fraudText: { color: "#B3261E", fontWeight: "700" },
 });
