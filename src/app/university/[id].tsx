@@ -65,6 +65,11 @@ export default function UniversityScreen() {
               <Ionicons name={u.type === "college" ? "business-outline" : "school-outline"} size={48} color={color.muted} />
             </View>
           )}
+          {u.photo_url && u.photo_credit ? (
+            <AppText variant="caption" color={color.faint} style={{ marginTop: 6 }}>
+              Фото: {u.photo_credit}
+            </AppText>
+          ) : null}
 
           <View style={s.typePill}>
             <AppText style={s.typeText}>{uniTypeLabel(u.type)}</AppText>
@@ -85,6 +90,18 @@ export default function UniversityScreen() {
               <AppText variant="body" color={color.ink}>
                 {u.description}
               </AppText>
+            </>
+          ) : null}
+
+          {u.requirements ? (
+            <>
+              <SectionHeader title="Как поступить" />
+              <View style={s.req}>
+                <Ionicons name="school-outline" size={20} color={color.forest} />
+                <AppText variant="body" color={color.ink} style={{ flex: 1 }}>
+                  {u.requirements}
+                </AppText>
+              </View>
             </>
           ) : null}
 
@@ -128,6 +145,7 @@ const s = StyleSheet.create({
   },
   typeText: { fontFamily: font.semibold, fontSize: 12, color: color.forest },
   cityRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: space.x1 },
+  req: { flexDirection: "row", gap: space.x3, backgroundColor: color.limeSoft, borderRadius: radius.card, padding: space.x4 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: space.x2 },
   tag: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line, borderRadius: radius.pill, paddingHorizontal: space.x3, paddingVertical: 7 },
   tagText: { fontFamily: font.medium, fontSize: 13, color: color.ink },

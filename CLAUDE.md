@@ -109,7 +109,14 @@ global.css, scripts/reset-project.js и их картинки) удалены 30
 Таблицы: `profiles` (name, nickname, avatar_emoji, avatar_color, points, region, place_name, place_type,
 birth_year, parent_verified, is_moderator), `tasks` (emoji, title, description, place_type, points, category),
 `submissions` (user_id, task_id, before_path, after_path, status: pending/approved/rejected, reject_reason, created_at;
-уникальность активной заявки → ошибка `23505`), `universities`, `portfolio_links` (user_id, code).
+уникальность активной заявки → ошибка `23505`), `universities` (name, city, type, website, description, programs
+— через запятую, requirements — как поступить, photo_url, photo_credit, checked_at), `portfolio_links` (user_id, code).
+Триггеры на `submissions`: лимит 5 заявок в сутки, повтор задания не раньше чем через 7 дней, проверка безопасности/согласия.
+Права: пользователь сам может менять в `profiles` только `region`, `place_type`, `place_name` (column-level grants).
+
+**Фото вузов** — только в публичном бакете Storage `uni-photos` проекта. Wikimedia отдаёт 403 запросам из Android-приложения,
+поэтому ссылки на upload.wikimedia.org в `photo_url` не ставить. Для фото CC BY / CC BY-SA обязательно заполнять `photo_credit`.
+Данные вузов — только проверенные (источник + `checked_at`).
 
 RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_safety_info`, `update_appearance`,
 `review_submission`, `penalize_submission`, `confirm_parent_consent`, `delete_my_account`.

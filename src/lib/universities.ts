@@ -9,6 +9,10 @@ export type Uni = {
   programs: string | null;
   photo_url: string | null;
   checked_at: string | null;
+  /** как поступить: ЕНТ / собственные экзамены, с годом актуальности */
+  requirements: string | null;
+  /** автор и лицензия фото — показывать под фото (требование CC BY / CC BY-SA) */
+  photo_credit: string | null;
 };
 
 export const uniTypeLabel = (type: string) => (type === "college" ? "Колледж" : "Университет");
