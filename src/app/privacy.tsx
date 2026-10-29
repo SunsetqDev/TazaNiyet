@@ -1,7 +1,8 @@
-import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
-
-const GREEN = "#1F7A4D";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "../components/ui/app-text";
+import { BackButton } from "../components/ui/back-button";
+import { Screen } from "../components/ui/screen";
+import { color, space } from "../lib/theme";
 
 const SECTIONS = [
   ["Какие данные мы собираем", "Имя, почту, год рождения, область и название населённого пункта, фотографии выполненных заданий, очки TZ. Для пользователей до 14 лет также имя и контакт родителя."],
@@ -14,28 +15,25 @@ const SECTIONS = [
 ];
 
 export default function PrivacyScreen() {
-  const router = useRouter();
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.back}>← Назад</Text>
-      </Pressable>
-      <Text style={styles.title}>Политика конфиденциальности</Text>
-      {SECTIONS.map(([h, t]) => (
-        <Text key={h} style={styles.block}>
-          <Text style={styles.h}>{h}{"\n"}</Text>
-          {t}
-        </Text>
-      ))}
-    </ScrollView>
+    <Screen bottomInset>
+      <BackButton />
+      <AppText variant="h1">Политика конфиденциальности</AppText>
+      <View style={{ marginTop: space.x4 }}>
+        {SECTIONS.map(([h, t], i) => (
+          <View key={h} style={[s.block, i > 0 && s.line]}>
+            <AppText variant="h3">{h}</AppText>
+            <AppText variant="body" color={color.ink} style={{ marginTop: space.x1 }}>
+              {t}
+            </AppText>
+          </View>
+        ))}
+      </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F6F3EA" },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 50 },
-  back: { color: GREEN, fontSize: 16, fontWeight: "600", marginBottom: 16 },
-  title: { fontSize: 26, fontWeight: "800", color: "#1C2B23", marginBottom: 16 },
-  block: { color: "#3F4F46", lineHeight: 22, marginBottom: 16, fontSize: 15 },
-  h: { fontWeight: "800", color: "#1C2B23", fontSize: 16 },
+const s = StyleSheet.create({
+  block: { paddingVertical: space.x4 },
+  line: { borderTopWidth: 1, borderTopColor: color.line },
 });

@@ -1,8 +1,13 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
+import { AppText } from "../components/ui/app-text";
+import { BackButton } from "../components/ui/back-button";
+import { ListRow, RowIcon } from "../components/ui/list-row";
+import { Screen } from "../components/ui/screen";
+import { SectionHeader } from "../components/ui/section-header";
 import { supabase } from "../lib/supabase";
-
-const GREEN = "#1F7A4D";
+import { color, radius, space } from "../lib/theme";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -39,30 +44,52 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.back}>← Назад</Text>
-      </Pressable>
-      <Text style={styles.title}>Настройки</Text>
+    <Screen bottomInset>
+      <BackButton />
+      <AppText variant="h1">Настройки</AppText>
 
-      <Pressable style={styles.item} onPress={() => router.push("/privacy")}>
-        <Text style={styles.itemText}>🔒 Политика конфиденциальности</Text>
-      </Pressable>
+      <SectionHeader title="Конфиденциальность" />
+      <View style={s.group}>
+        <ListRow
+          first
+          title="Политика конфиденциальности"
+          subtitle="какие данные мы храним и кто их видит"
+          leading={
+            <RowIcon>
+              <Ionicons name="lock-closed-outline" size={20} color={color.forest} />
+            </RowIcon>
+          }
+          onPress={() => router.push("/privacy")}
+        />
+      </View>
 
-      <Pressable style={[styles.item, styles.danger]} onPress={deleteAccount}>
-        <Text style={styles.dangerText}>🗑 Удалить аккаунт и все данные</Text>
-      </Pressable>
-    </ScrollView>
+      <SectionHeader title="Опасная зона" />
+      <View style={s.group}>
+        <ListRow
+          first
+          danger
+          title="Удалить аккаунт и все данные"
+          leading={
+            <RowIcon tint={color.dangerSoft}>
+              <Ionicons name="trash-outline" size={20} color={color.danger} />
+            </RowIcon>
+          }
+          onPress={deleteAccount}
+        />
+      </View>
+      <AppText variant="caption" style={{ marginTop: space.x2 }}>
+        Удаляются профиль, очки, заявки и фотографии. Отменить это нельзя.
+      </AppText>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F6F3EA" },
-  content: { padding: 20, paddingTop: 60 },
-  back: { color: GREEN, fontSize: 16, fontWeight: "600", marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: "800", color: "#1C2B23", marginBottom: 20 },
-  item: { backgroundColor: "white", borderRadius: 16, padding: 18, marginBottom: 12 },
-  itemText: { color: "#1C2B23", fontWeight: "600", fontSize: 16 },
-  danger: { backgroundColor: "#FCE8E6" },
-  dangerText: { color: "#B3261E", fontWeight: "700", fontSize: 16 },
+const s = StyleSheet.create({
+  group: {
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: radius.card,
+    paddingHorizontal: space.x4,
+  },
 });

@@ -1,9 +1,18 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { Avatar } from "../../components/avatar";
+import { AppText } from "../../components/ui/app-text";
+import { Button } from "../../components/ui/button";
+import { ListRow, RowIcon } from "../../components/ui/list-row";
+import { Screen } from "../../components/ui/screen";
+import { SectionHeader } from "../../components/ui/section-header";
+import { Skeleton } from "../../components/ui/skeleton";
 import { supabase } from "../../lib/supabase";
-import { C, R, S } from "../../lib/theme";
+import { color as palette, font, radius, space } from "../../lib/theme";
+
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 function calcStreak(dates: string[]) {
   const days = new Set(dates.map((d) => new Date(d).toDateString()));
@@ -17,8 +26,26 @@ function calcStreak(dates: string[]) {
   return streak;
 }
 
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <View style={s.stat}>
+      <AppText style={s.statNum}>{value}</AppText>
+      <AppText variant="caption">{label}</AppText>
+    </View>
+  );
+}
+
+function MenuIcon({ name, danger }: { name: IconName; danger?: boolean }) {
+  return (
+    <RowIcon tint={danger ? palette.dangerSoft : palette.limeSoft}>
+      <Ionicons name={name} size={20} color={danger ? palette.danger : palette.forest} />
+    </RowIcon>
+  );
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState<string | null>(null);
   const [emoji, setEmoji] = useState<string | null>(null);
@@ -48,6 +75,7 @@ export default function ProfileScreen() {
         setColor(p?.avatar_color ?? null);
         setPoints(p?.points ?? 0);
         setIsMod(p?.is_moderator === true);
+
         const { data: subs } = await supabase
           .from("submissions")
           .select("created_at")
@@ -56,6 +84,7 @@ export default function ProfileScreen() {
         const list = (subs ?? []).map((x: any) => x.created_at as string);
         setApproved(list.length);
         setStreak(calcStreak(list));
+        setReady(true);
       };
       load();
     }, [])
@@ -74,89 +103,123 @@ export default function ProfileScreen() {
     ]);
   };
 
+  // cur / max — для подписи прогресса у закрытых значков
   const badges = [
-    { icon: "🌱", title: "Первый шаг", got: approved >= 1 },
-    { icon: "🌿", title: "5 заданий", got: approved >= 5 },
-    { icon: "🌳", title: "10 заданий", got: approved >= 10 },
-    { icon: "🔥", title: "3 дня подряд", got: streak >= 3 },
-    { icon: "🏆", title: "Неделя подряд", got: streak >= 7 },
-    { icon: "⭐", title: "100 TZ", got: points >= 100 },
-    { icon: "💎", title: "500 TZ", got: points >= 500 },
+    { icon: "🌱", title: "Первый шаг", cur: approved, max: 1 },
+    { icon: "🌿", title: "5 заданий", cur: approved, max: 5 },
+    { icon: "🌳", title: "10 заданий", cur: approved, max: 10 },
+    { icon: "🔥", title: "3 дня подряд", cur: streak, max: 3 },
+    { icon: "🏆", title: "Неделя подряд", cur: streak, max: 7 },
+    { icon: "⭐", title: "100 TZ", cur: points, max: 100 },
+    { icon: "💎", title: "500 TZ", cur: points, max: 500 },
   ];
-
-  const Menu = ({ icon, label, onPress, danger }: { icon: string; label: string; onPress: () => void; danger?: boolean }) => (
-    <Pressable style={s.menuItem} onPress={onPress}>
-      <Text style={s.menuIcon}>{icon}</Text>
-      <Text style={[s.menuText, danger && { color: C.danger }]}>{label}</Text>
-      <Text style={s.chev}>›</Text>
-    </Pressable>
-  );
+  const gotCount = badges.filter((b) => b.cur >= b.max).length;
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-      <View style={s.avatarWrap}>
-        <Avatar name={nickname || name} emoji={emoji} color={color} size={96} />
+    <Screen>
+      <View style={s.head}>
+        <Avatar name={nickname || name} emoji={emoji} color={color} size={88} />
+        {ready ? (
+          <>
+            <AppText variant="h1" style={{ marginTop: space.x3, textAlign: "center" }}>
+              {nickname || name || "Мой профиль"}
+            </AppText>
+            {nickname && name ? <AppText variant="caption">{name} · видно только вам</AppText> : null}
+          </>
+        ) : (
+          <Skeleton width={180} height={28} style={{ marginTop: space.x3 }} />
+        )}
+        <Button
+          label="Изменить профиль"
+          icon="create-outline"
+          variant="secondary"
+          onPress={() => router.push("/edit-profile")}
+          style={s.editBtn}
+        />
       </View>
-      <Text style={s.name}>{nickname || name || "Мой профиль"}</Text>
-      {nickname && name ? <Text style={s.realName}>{name}</Text> : null}
-
-      <Pressable style={s.editBtn} onPress={() => router.push("/edit-profile")}>
-        <Text style={s.editText}>✏️ Изменить профиль</Text>
-      </Pressable>
 
       <View style={s.stats}>
-        <View style={s.stat}>
-          <Text style={s.statNum}>{points}</Text>
-          <Text style={s.statLabel}>очков TZ</Text>
-        </View>
-        <View style={s.stat}>
-          <Text style={s.statNum}>{approved}</Text>
-          <Text style={s.statLabel}>выполнено</Text>
-        </View>
-        <View style={s.stat}>
-          <Text style={s.statNum}>{streak}</Text>
-          <Text style={s.statLabel}>дней подряд</Text>
-        </View>
+        <Stat value={points} label="очков TZ" />
+        <Stat value={approved} label="принято" />
+        <Stat value={streak} label="дней подряд" />
       </View>
 
-      <Text style={s.section}>Значки</Text>
+      <SectionHeader title="Значки" hint={`${gotCount} из ${badges.length}`} />
       <View style={s.badges}>
-        {badges.map((b) => (
-          <View key={b.title} style={[s.badge, !b.got && { opacity: 0.4 }]}>
-            <Text style={s.badgeIcon}>{b.got ? b.icon : "🔒"}</Text>
-            <Text style={s.badgeTitle}>{b.title}</Text>
-          </View>
-        ))}
+        {badges.map((b) => {
+          const got = b.cur >= b.max;
+          return (
+            <View key={b.title} style={[s.badge, got && s.badgeOn]}>
+              {got ? (
+                <Text style={s.badgeIcon}>{b.icon}</Text>
+              ) : (
+                <View style={s.lock}>
+                  <Ionicons name="lock-closed-outline" size={18} color={palette.faint} />
+                </View>
+              )}
+              <AppText style={s.badgeTitle} color={got ? palette.ink : palette.muted} numberOfLines={2}>
+                {b.title}
+              </AppText>
+              {!got && (
+                <AppText variant="caption" color={palette.faint}>
+                  {Math.min(b.cur, b.max)} / {b.max}
+                </AppText>
+              )}
+            </View>
+          );
+        })}
       </View>
 
-      <Text style={s.section}>Меню</Text>
-      <Menu icon="📋" label="Мои задания и статусы" onPress={() => router.push("/my")} />
-      <Menu icon="⚙️" label="Настройки и конфиденциальность" onPress={() => router.push("/settings")} />
-      {isMod && <Menu icon="🛡" label="Проверка заданий" onPress={() => router.push("/moderator")} />}
-      <Menu icon="🚪" label="Выйти" onPress={signOut} danger />
-    </ScrollView>
+      <SectionHeader title="Активность" />
+      <View style={s.group}>
+        <ListRow first title="Мои задания и статусы" leading={<MenuIcon name="list-outline" />} onPress={() => router.push("/my")} />
+      </View>
+
+      <SectionHeader title="Аккаунт" />
+      <View style={s.group}>
+        <ListRow
+          first
+          title="Настройки и конфиденциальность"
+          leading={<MenuIcon name="settings-outline" />}
+          onPress={() => router.push("/settings")}
+        />
+        {isMod && (
+          <ListRow title="Проверка заданий" subtitle="для модераторов" leading={<MenuIcon name="shield-checkmark-outline" />} onPress={() => router.push("/moderator")} />
+        )}
+        <ListRow title="Выйти" danger leading={<MenuIcon name="log-out-outline" danger />} onPress={signOut} />
+      </View>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
-  content: { padding: S.md + 4, paddingTop: 70, paddingBottom: S.xl + 20 },
-  avatarWrap: { alignSelf: "center" },
-  name: { fontSize: 26, fontWeight: "700", color: C.text, textAlign: "center", marginTop: S.sm },
-  realName: { fontSize: 13, color: C.muted, textAlign: "center", marginTop: 2 },
-  editBtn: { alignSelf: "center", backgroundColor: C.sageSoft, borderRadius: R.chip, paddingHorizontal: 18, paddingVertical: 10, marginTop: S.sm + 2, marginBottom: S.lg },
-  editText: { color: C.sageDark, fontWeight: "700" },
-  stats: { flexDirection: "row", gap: S.sm, marginBottom: S.xl },
-  stat: { flex: 1, backgroundColor: C.sageSoft, borderRadius: R.card, padding: S.md - 4, alignItems: "center" },
-  statNum: { fontSize: 24, fontWeight: "800", color: C.sageDark },
-  statLabel: { fontSize: 12, color: C.muted, marginTop: 4 },
-  section: { fontSize: 20, fontWeight: "700", color: C.text, marginBottom: S.md },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: S.sm, marginBottom: S.xl },
-  badge: { width: "30.5%", backgroundColor: C.card, borderRadius: R.card, paddingVertical: S.md - 4, alignItems: "center" },
-  badgeIcon: { fontSize: 28 },
-  badgeTitle: { fontSize: 11, fontWeight: "600", color: C.text, marginTop: 6, textAlign: "center" },
-  menuItem: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderRadius: R.card, padding: S.md, marginBottom: S.sm },
-  menuIcon: { fontSize: 20, marginRight: S.sm + 2 },
-  menuText: { flex: 1, fontSize: 16, fontWeight: "600", color: C.text },
-  chev: { fontSize: 22, color: C.muted },
+  head: { alignItems: "center", marginTop: space.x2 },
+  editBtn: { minHeight: 44, marginTop: space.x4, paddingHorizontal: space.x5 },
+  stats: { flexDirection: "row", gap: space.x2, marginTop: space.x6 },
+  stat: { flex: 1, backgroundColor: palette.sand, borderRadius: 18, padding: space.x3 },
+  statNum: { fontFamily: font.display, fontSize: 26, lineHeight: 32, color: palette.ink },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: space.x2 },
+  badge: {
+    width: "31.5%",
+    minHeight: 112,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: 20,
+    padding: space.x3,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  badgeOn: { backgroundColor: palette.limeSoft, borderColor: palette.limeSoft },
+  badgeIcon: { fontSize: 30 },
+  lock: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.cream, alignItems: "center", justifyContent: "center" },
+  badgeTitle: { fontFamily: font.semibold, fontSize: 12, lineHeight: 16, textAlign: "center" },
+  group: {
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: radius.card,
+    paddingHorizontal: space.x4,
+  },
 });

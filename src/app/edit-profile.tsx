@@ -1,18 +1,17 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { AVATAR_COLORS, AVATAR_EMOJIS, Avatar } from "../components/avatar";
+import { AppText } from "../components/ui/app-text";
+import { BackButton } from "../components/ui/back-button";
+import { Button } from "../components/ui/button";
+import { Screen } from "../components/ui/screen";
+import { SectionHeader } from "../components/ui/section-header";
+import { Skeleton } from "../components/ui/skeleton";
+import { TextField } from "../components/ui/text-field";
 import { supabase } from "../lib/supabase";
-import { C, R, S } from "../lib/theme";
+import { color as palette, font, radius, space } from "../lib/theme";
 
 const NICK_RE = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі0-9_.-]+$/;
 
@@ -84,49 +83,45 @@ export default function EditProfileScreen() {
 
   if (loading) {
     return (
-      <View style={[s.screen, { justifyContent: "center" }]}>
-        <ActivityIndicator color={C.sageDark} />
-      </View>
+      <Screen bottomInset>
+        <BackButton />
+        <View style={{ alignItems: "center", gap: space.x3 }}>
+          <Skeleton width={104} height={104} round={52} />
+          <Skeleton width={160} height={22} />
+        </View>
+        <Skeleton height={52} round={radius.field} style={{ marginTop: space.x8 }} />
+      </Screen>
     );
   }
 
   return (
-    <ScrollView
-      style={s.screen}
-      contentContainerStyle={s.content}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <Pressable onPress={() => router.back()}>
-        <Text style={s.back}>← Назад</Text>
-      </Pressable>
-      <Text style={s.title}>Мой профиль</Text>
+    <Screen bottomInset footer={<Button label="Сохранить" onPress={save} loading={saving} />}>
+      <BackButton />
+      <AppText variant="h1">Мой профиль</AppText>
 
       <View style={s.preview}>
         <Avatar name={nick || realName} emoji={emoji} color={color} size={104} />
-        <Text style={s.previewName}>{nick || realName || "Без имени"}</Text>
+        <AppText variant="h2" style={{ marginTop: space.x3 }}>
+          {nick || realName || "Без имени"}
+        </AppText>
       </View>
 
-      <Text style={s.label}>Никнейм</Text>
-      <TextInput
-        style={[s.input, nickError ? { borderColor: C.danger } : null]}
+      <TextField
+        label="Никнейм"
         placeholder="Например: eco_hero"
         autoCapitalize="none"
         autoCorrect={false}
         maxLength={20}
         value={nickname}
         onChangeText={setNickname}
+        error={nickError}
+        hint="Его будут видеть другие участники в рейтинге. Настоящее имя остаётся скрытым."
       />
-      {nickError ? (
-        <Text style={s.error}>{nickError}</Text>
-      ) : (
-        <Text style={s.hint}>Его будут видеть другие участники в рейтинге. Настоящее имя остаётся скрытым.</Text>
-      )}
 
-      <Text style={s.label}>Аватар</Text>
+      <SectionHeader title="Аватар" />
       <View style={s.grid}>
         <Pressable style={[s.cell, emoji === null && s.cellOn]} onPress={() => setEmoji(null)}>
-          <Text style={s.cellLetter}>{(nick || realName || "?").charAt(0).toUpperCase()}</Text>
+          <AppText style={s.cellLetter}>{(nick || realName || "?").charAt(0).toUpperCase()}</AppText>
         </Pressable>
         {AVATAR_EMOJIS.map((e) => (
           <Pressable key={e} style={[s.cell, emoji === e && s.cellOn]} onPress={() => setEmoji(e)}>
@@ -135,42 +130,37 @@ export default function EditProfileScreen() {
         ))}
       </View>
 
-      <Text style={s.label}>Цвет</Text>
+      <SectionHeader title="Цвет фона" />
       <View style={s.grid}>
         {AVATAR_COLORS.map((c) => (
-          <Pressable
-            key={c}
-            onPress={() => setColor(c)}
-            style={[s.colorDot, { backgroundColor: c }, color === c && s.colorOn]}
-          />
+          <Pressable key={c} onPress={() => setColor(c)} style={[s.colorRing, color === c && s.colorRingOn]}>
+            <View style={[s.colorDot, { backgroundColor: c }]}>
+              {color === c && <Ionicons name="checkmark" size={18} color={palette.ink} />}
+            </View>
+          </Pressable>
         ))}
       </View>
-
-      <Pressable style={[s.button, saving && { opacity: 0.6 }]} onPress={save} disabled={saving}>
-        {saving ? <ActivityIndicator color="white" /> : <Text style={s.buttonText}>Сохранить</Text>}
-      </Pressable>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
-  content: { padding: S.md + 4, paddingTop: 60, paddingBottom: S.xl + 20 },
-  back: { color: C.sageDark, fontSize: 16, fontWeight: "600", marginBottom: S.md },
-  title: { fontSize: 30, fontWeight: "700", color: C.text, marginBottom: S.md },
-  preview: { alignItems: "center", backgroundColor: C.sageSoft, borderRadius: 30, padding: S.lg, marginBottom: S.lg },
-  previewName: { fontSize: 22, fontWeight: "800", color: C.text, marginTop: S.sm },
-  label: { fontSize: 16, fontWeight: "700", color: C.text, marginBottom: S.sm, marginTop: S.sm },
-  input: { backgroundColor: C.card, borderRadius: R.card, padding: 16, fontSize: 16, borderWidth: 1.5, borderColor: C.line, color: C.text },
-  hint: { color: C.muted, fontSize: 12, marginTop: 6, marginBottom: S.sm, lineHeight: 18 },
-  error: { color: C.danger, fontSize: 12, marginTop: 6, marginBottom: S.sm },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: S.sm },
-  cell: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.card, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "transparent" },
-  cellOn: { borderColor: C.sageDark, backgroundColor: C.sageSoft },
+  preview: { alignItems: "center", marginTop: space.x5, marginBottom: space.x6 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.x2 },
+  cell: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cellOn: { borderWidth: 2, borderColor: palette.forest, backgroundColor: palette.limeSoft },
+  cellLetter: { fontFamily: font.semibold, fontSize: 22, color: palette.ink },
   cellEmoji: { fontSize: 28 },
-  cellLetter: { fontSize: 22, fontWeight: "700", color: C.text },
-  colorDot: { width: 44, height: 44, borderRadius: 22, borderWidth: 3, borderColor: "transparent" },
-  colorOn: { borderColor: C.text },
-  button: { backgroundColor: C.sageDark, borderRadius: R.btn, padding: 18, alignItems: "center", marginTop: S.lg },
-  buttonText: { color: "white", fontSize: 17, fontWeight: "700" },
+  colorRing: { padding: 3, borderRadius: 28, borderWidth: 2, borderColor: "transparent" },
+  colorRingOn: { borderColor: palette.forest },
+  colorDot: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
 });

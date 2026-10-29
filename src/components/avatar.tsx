@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { C } from "../lib/theme";
+import { color as palette, font } from "../lib/theme";
 
 export const AVATAR_EMOJIS = ["🐻", "🦊", "🐼", "🐨", "🦉", "🐸", "🐢", "🦋", "🐝", "🐬", "🦔", "🦦", "🐧", "🦜", "🌻", "🌲"];
 
@@ -14,11 +14,11 @@ type Props = {
 
 export function Avatar({ name, emoji, color, size = 52 }: Props) {
   return (
-    <View style={[s.box, { width: size, height: size, borderRadius: size / 2, backgroundColor: color || C.sage }]}>
+    <View style={[s.box, { width: size, height: size, borderRadius: size / 2, backgroundColor: color || palette.lime }]}>
       {emoji ? (
         <Text style={{ fontSize: size * 0.52 }}>{emoji}</Text>
       ) : (
-        <Text style={{ fontSize: size * 0.42, fontWeight: "700", color: C.text }}>
+        <Text style={{ fontSize: size * 0.42, fontFamily: font.semibold, color: palette.ink }}>
           {(name || "?").charAt(0).toUpperCase()}
         </Text>
       )}
