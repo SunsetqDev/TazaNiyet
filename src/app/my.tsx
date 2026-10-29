@@ -1,8 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, StyleSheet, Text, View } from "react-native";
+import { AppText } from "../components/ui/app-text";
+import { BackButton } from "../components/ui/back-button";
+import { EmptyState, ErrorState } from "../components/ui/empty-state";
+import { RowIcon } from "../components/ui/list-row";
+import { Screen } from "../components/ui/screen";
+import { Skeleton } from "../components/ui/skeleton";
+import { StatusPill } from "../components/ui/status-pill";
 import { supabase } from "../lib/supabase";
-import { C, R, S } from "../lib/theme";
+import { color, font, radius, space } from "../lib/theme";
 
 type Row = {
   id: number;
@@ -12,11 +20,14 @@ type Row = {
   tasks: { emoji: string; title: string; points: number } | null;
 };
 
-const STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: "⏳ На проверке", color: C.warn, bg: C.warnSoft },
-  approved: { label: "✓ Принято", color: C.sageDark, bg: C.sageSoft },
-  rejected: { label: "✕ Отклонено", color: C.danger, bg: C.dangerSoft },
-};
+function Sum({ value, label }: { value: number; label: string }) {
+  return (
+    <View style={s.sum}>
+      <AppText style={s.sumNum}>{value}</AppText>
+      <AppText variant="caption">{label}</AppText>
+    </View>
+  );
+}
 
 export default function MyScreen() {
   const router = useRouter();
@@ -42,7 +53,7 @@ export default function MyScreen() {
       .select("id, status, created_at, reject_reason, tasks(emoji, title, points)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    if (error) setError("Ошибка: " + error.message);
+    if (error) setError(error.message);
     else setRows(data as unknown as Row[]);
     setLoading(false);
   }, []);
@@ -63,92 +74,92 @@ export default function MyScreen() {
   const pending = rows.filter((r) => r.status === "pending").length;
 
   return (
-    <ScrollView
-      style={s.screen}
-      contentContainerStyle={s.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.sageDark} />}
+    <Screen
+      bottomInset
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.forest]} tintColor={color.forest} />}
     >
-      <Pressable onPress={() => router.back()}>
-        <Text style={s.back}>← Назад</Text>
-      </Pressable>
-
-      <Text style={s.title}>Мои задания</Text>
+      <BackButton />
+      <AppText variant="h1">Мои задания</AppText>
 
       <View style={s.summary}>
-        <View style={s.sumBox}>
-          <Text style={s.sumNum}>{points}</Text>
-          <Text style={s.sumLabel}>очков TZ</Text>
-        </View>
-        <View style={s.sumBox}>
-          <Text style={s.sumNum}>{approved}</Text>
-          <Text style={s.sumLabel}>выполнено</Text>
-        </View>
-        <View style={s.sumBox}>
-          <Text style={s.sumNum}>{pending}</Text>
-          <Text style={s.sumLabel}>на проверке</Text>
-        </View>
+        <Sum value={points} label="очков TZ" />
+        <Sum value={approved} label="принято" />
+        <Sum value={pending} label="на проверке" />
       </View>
 
-      {loading && <ActivityIndicator color={C.sageDark} style={{ marginTop: S.md }} />}
-      {error && <Text style={s.error}>{error}</Text>}
-      {!loading && !error && rows.length === 0 && (
-        <View style={s.emptyBox}>
-          <Text style={{ fontSize: 44 }}>🌱</Text>
-          <Text style={s.empty}>Пока нет заявок. Выполните первое задание!</Text>
+      {loading && (
+        <View style={{ gap: space.x3 }}>
+          <Skeleton height={76} round={radius.card} />
+          <Skeleton height={76} round={radius.card} />
+          <Skeleton height={76} round={radius.card} />
         </View>
       )}
+      {!loading && error && <ErrorState onRetry={load} />}
+      {!loading && !error && rows.length === 0 && (
+        <EmptyState
+          icon="leaf-outline"
+          title="Пока нет заявок"
+          text="Выполните первое задание — здесь появится его статус."
+          action="К заданиям"
+          onAction={() => router.replace("/")}
+        />
+      )}
 
-      {rows.map((r) => {
-        const st = STATUS[r.status] ?? STATUS.pending;
-        return (
+      {!loading &&
+        !error &&
+        rows.map((r) => (
           <View key={r.id} style={s.item}>
             <View style={s.itemTop}>
-              <Text style={s.emoji}>{r.tasks?.emoji}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={s.itemTitle}>{r.tasks?.title ?? "Задание"}</Text>
-                <Text style={s.date}>{new Date(r.created_at).toLocaleDateString("ru-RU")}</Text>
-                <View style={[s.badge, { backgroundColor: st.bg }]}>
-                  <Text style={[s.badgeText, { color: st.color }]}>{st.label}</Text>
-                </View>
+              <RowIcon>
+                <Text style={{ fontSize: 20 }}>{r.tasks?.emoji}</Text>
+              </RowIcon>
+              <View style={{ flex: 1, gap: 4 }}>
+                <AppText variant="bodyStrong">{r.tasks?.title ?? "Задание"}</AppText>
+                <AppText variant="caption">{new Date(r.created_at).toLocaleDateString("ru-RU")}</AppText>
+                <StatusPill status={r.status} />
               </View>
-              <Text style={[s.pts, r.status !== "approved" && { opacity: 0.35 }]}>+{r.tasks?.points ?? 0}</Text>
+              <AppText style={[s.pts, r.status !== "approved" && { color: color.faint }]}>+{r.tasks?.points ?? 0}</AppText>
             </View>
 
             {r.status === "rejected" && r.reject_reason ? (
               <View style={s.reason}>
-                <Text style={s.reasonTitle}>Почему отклонено</Text>
-                <Text style={s.reasonText}>{r.reject_reason}</Text>
+                <Ionicons name="information-circle-outline" size={18} color={color.danger} />
+                <View style={{ flex: 1 }}>
+                  <AppText variant="bodyStrong" color={color.danger}>
+                    Почему отклонено
+                  </AppText>
+                  <AppText variant="body" color={color.ink}>
+                    {r.reject_reason}
+                  </AppText>
+                </View>
               </View>
             ) : null}
           </View>
-        );
-      })}
-    </ScrollView>
+        ))}
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
-  content: { padding: S.md + 4, paddingTop: 60, paddingBottom: S.xl + 10 },
-  back: { color: C.sageDark, fontSize: 16, fontWeight: "600", marginBottom: S.md },
-  title: { fontSize: 30, fontWeight: "700", color: C.text, marginBottom: S.md },
-  summary: { flexDirection: "row", gap: S.sm, marginBottom: S.lg },
-  sumBox: { flex: 1, backgroundColor: C.sage, borderRadius: R.card, padding: S.md - 4, alignItems: "center" },
-  sumNum: { color: C.text, fontSize: 24, fontWeight: "800" },
-  sumLabel: { color: C.text, opacity: 0.65, fontSize: 12, marginTop: 2 },
-  error: { color: C.danger, marginTop: S.sm },
-  emptyBox: { alignItems: "center", backgroundColor: C.card, borderRadius: R.card, padding: S.lg },
-  empty: { color: C.muted, marginTop: S.sm, textAlign: "center" },
-  item: { backgroundColor: C.card, borderRadius: R.card, padding: S.md - 4, marginBottom: S.sm },
-  itemTop: { flexDirection: "row", alignItems: "center", gap: S.sm + 4 },
-  emoji: { fontSize: 30 },
-  itemTitle: { fontSize: 16, fontWeight: "700", color: C.text },
-  date: { fontSize: 12, color: C.muted, marginTop: 2 },
-  badge: { alignSelf: "flex-start", borderRadius: R.chip, paddingHorizontal: 12, paddingVertical: 5, marginTop: S.sm },
-  badgeText: { fontSize: 12, fontWeight: "700" },
-  pts: { color: C.sageDark, fontWeight: "800", fontSize: 17 },
-  reason: { backgroundColor: C.dangerSoft, borderRadius: 16, padding: S.sm + 4, marginTop: S.sm + 2 },
-  reasonTitle: { color: C.danger, fontWeight: "700", fontSize: 13, marginBottom: 4 },
-  reasonText: { color: C.text, lineHeight: 20 },
+  summary: { flexDirection: "row", gap: space.x2, marginTop: space.x5, marginBottom: space.x6 },
+  sum: { flex: 1, backgroundColor: color.sand, borderRadius: 18, padding: space.x3 },
+  sumNum: { fontFamily: font.display, fontSize: 26, lineHeight: 32, color: color.ink },
+  item: {
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: radius.card,
+    padding: space.x4,
+    marginBottom: space.x3,
+  },
+  itemTop: { flexDirection: "row", alignItems: "flex-start", gap: space.x3 },
+  pts: { fontFamily: font.bold, fontSize: 15, color: color.forest },
+  reason: {
+    flexDirection: "row",
+    gap: space.x2,
+    backgroundColor: color.dangerSoft,
+    borderRadius: 16,
+    padding: space.x3,
+    marginTop: space.x3,
+  },
 });
