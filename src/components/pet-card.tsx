@@ -1,17 +1,25 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, { Easing, ZoomIn, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { RANKS, getRank, getRankIndex } from "../lib/ranks";
-import { C, S } from "../lib/theme";
+import { color, font, radius, space, type } from "../lib/theme";
 import { CountUp } from "./anim";
 import { LivingTree } from "./living-tree";
 import { Mascot, MascotMood } from "./mascot";
+import { AppText } from "./ui/app-text";
+
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 type Props = {
   points: number;
   streak: number;
   /** сколько дней назад была последняя активность; null — заданий ещё не было */
   daysSince: number | null;
+  /** принятых заявок */
+  approved: number;
+  /** заявок на проверке */
+  pending: number;
 };
 
 const QUIPS_HAPPY = ["Щекотно! 😄", "Ты молодец!", "Давай сделаем мир чище!", "Я тоже люблю баобабы 🌳", "Ещё одно задание? 😉"];
@@ -24,7 +32,22 @@ function healthFromDays(d: number | null) {
   return 3;
 }
 
-export function PetCard({ points, streak, daysSince }: Props) {
+function Stat({ icon, value, label }: { icon: IconName; value: number; label: string }) {
+  return (
+    <View style={s.stat}>
+      <View style={s.statTop}>
+        <Ionicons name={icon} size={16} color={color.lime} />
+        <CountUp value={value} style={s.statNum} />
+      </View>
+      <AppText variant="caption" color={color.onForestMuted}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+/** Главная карточка: ранг, очки, баобаб с Барсом, прогресс до следующего ранга и личная статистика. */
+export function PetCard({ points, streak, daysSince, approved, pending }: Props) {
   const rank = getRank(points);
   const stage = getRankIndex(points);
   const health = healthFromDays(daysSince);
@@ -75,51 +98,72 @@ export function PetCard({ points, streak, daysSince }: Props) {
 
   return (
     <View style={s.card}>
-      <View style={s.head}>
-        <Text style={s.rank}>
-          {rank.icon} {rank.name}
-        </Text>
-        <CountUp value={points} suffix=" TZ" style={s.pts} />
+      <AppText variant="overline" color={color.lime}>
+        Ранг · {rank.name}
+      </AppText>
+      <View style={s.ptsRow}>
+        <CountUp value={points} style={s.pts} />
+        <AppText style={s.ptsUnit} color={color.onForestMuted}>
+          TZ
+        </AppText>
       </View>
 
       <View style={s.scene}>
         <View style={s.treeBox}>
-          <LivingTree stage={stage} health={health} size={170} />
+          <LivingTree stage={stage} health={health} size={140} />
         </View>
         <View style={s.petBox}>
           <Animated.View key={shownMsg} entering={ZoomIn.springify().damping(12)} style={s.bubbleWrap}>
             <View style={s.bubble}>
-              <Text style={s.bubbleText}>{shownMsg}</Text>
+              <AppText style={s.bubbleText}>{shownMsg}</AppText>
             </View>
             <View style={s.tail} />
           </Animated.View>
-          <Mascot mood={mood} size={104} onTap={onTap} />
+          <Mascot mood={mood} size={92} onTap={onTap} />
         </View>
       </View>
 
       <View style={s.bar}>
         <Animated.View style={[s.barFill, barStyle]} />
       </View>
-      <Text style={s.next}>
-        {next ? `До ранга «${RANKS[stage + 1].name}»: ещё ${next - points} TZ` : "Высший ранг! Ты хранитель степи 🦅"}
-      </Text>
+      <AppText variant="caption" color={color.onForestMuted} style={{ marginTop: space.x2 }}>
+        {next ? `Ещё ${next - points} TZ до ранга «${RANKS[stage + 1].name}»` : "Высший ранг — ты хранитель степи"}
+      </AppText>
+
+      <View style={s.stats}>
+        <Stat icon="flame" value={streak} label="дней подряд" />
+        <Stat icon="checkmark-circle" value={approved} label="принято" />
+        <Stat icon="hourglass-outline" value={pending} label="на проверке" />
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: C.card, borderRadius: 30, padding: S.md, marginBottom: S.sm + 2 },
-  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  rank: { fontSize: 16, fontWeight: "800", color: C.text },
-  pts: { fontSize: 16, fontWeight: "800", color: C.sageDark },
-  scene: { flexDirection: "row", alignItems: "flex-end", marginTop: S.xs },
+  card: { backgroundColor: color.forest, borderRadius: radius.hero, padding: space.x5 },
+  ptsRow: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: space.x2 },
+  pts: { ...type.display, fontSize: 44, lineHeight: 50, color: color.onForest },
+  ptsUnit: { fontFamily: font.semibold, fontSize: 16 },
+  scene: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginTop: space.x4,
+    backgroundColor: color.moss,
+    borderRadius: 22,
+    paddingTop: space.x3,
+    paddingHorizontal: space.x2,
+    overflow: "hidden",
+  },
   treeBox: { flex: 1, alignItems: "center" },
-  petBox: { width: 128, alignItems: "center" },
+  petBox: { width: 132, alignItems: "center" },
   bubbleWrap: { alignItems: "center" },
-  bubble: { backgroundColor: C.sageSoft, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 10 },
-  bubbleText: { color: C.text, fontSize: 12.5, lineHeight: 17, fontWeight: "600" },
-  tail: { width: 14, height: 14, backgroundColor: C.sageSoft, transform: [{ rotate: "45deg" }], marginTop: -7, marginBottom: -2 },
-  bar: { height: 8, backgroundColor: C.sageSoft, borderRadius: 4, marginTop: S.sm },
-  barFill: { height: 8, backgroundColor: C.sage, borderRadius: 4 },
-  next: { color: C.muted, fontSize: 12, marginTop: 8 },
+  bubble: { backgroundColor: color.cream, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9 },
+  bubbleText: { fontFamily: font.medium, color: color.ink, fontSize: 12.5, lineHeight: 17 },
+  tail: { width: 12, height: 12, backgroundColor: color.cream, transform: [{ rotate: "45deg" }], marginTop: -6, marginBottom: -2 },
+  bar: { height: 6, backgroundColor: color.mossLine, borderRadius: 3, marginTop: space.x4, overflow: "hidden" },
+  barFill: { height: 6, backgroundColor: color.lime, borderRadius: 3 },
+  stats: { flexDirection: "row", gap: space.x2, marginTop: space.x4 },
+  stat: { flex: 1, backgroundColor: color.moss, borderRadius: 16, paddingVertical: space.x3 - 2, paddingHorizontal: space.x3 },
+  statTop: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statNum: { fontFamily: font.bold, fontSize: 18, lineHeight: 22, color: color.onForest },
 });

@@ -1,32 +1,54 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import type { ColorValue } from "react-native";
-import { C } from "../../lib/theme";
+import { View } from "react-native";
+import Animated, { ZoomIn } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { color, font, radius } from "../../lib/theme";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
+// активная вкладка — иконка на лаймовой «пилюле»
+function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
+  if (!focused) {
+    return (
+      <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
+        <Ionicons name={name} size={22} color={color.muted} />
+      </View>
+    );
+  }
+  return (
+    <Animated.View
+      entering={ZoomIn.duration(180)}
+      style={{ backgroundColor: color.lime, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 4 }}
+    >
+      <Ionicons name={name} size={22} color={color.forest} />
+    </Animated.View>
+  );
+}
+
 const tab = (title: string, icon: IconName, iconOn: IconName) => ({
   title,
-  tabBarIcon: ({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) => (
-    <Ionicons name={focused ? iconOn : icon} size={size} color={color as string} />
-  ),
+  tabBarIcon: ({ focused }: { focused: boolean }) => <TabIcon name={focused ? iconOn : icon} focused={focused} />,
 });
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: C.sageDark,
-        tabBarInactiveTintColor: C.muted,
+        tabBarActiveTintColor: color.forest,
+        tabBarInactiveTintColor: color.muted,
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: C.line,
-          height: 70,
+          backgroundColor: color.surface,
+          borderTopColor: color.line,
+          borderTopWidth: 1,
+          height: 64 + insets.bottom,
           paddingTop: 8,
-          paddingBottom: 12,
+          paddingBottom: insets.bottom + 8,
+          elevation: 0,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11, marginTop: 2 },
       }}
     >
       <Tabs.Screen name="index" options={tab("Задания", "leaf-outline", "leaf")} />

@@ -1,15 +1,25 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { CountUp, PressScale, PulseEmoji } from "../../components/anim";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { CountUp, PressScale } from "../../components/anim";
 import { Avatar } from "../../components/avatar";
 import { Celebration } from "../../components/celebration";
 import { PetCard } from "../../components/pet-card";
+import { AppText } from "../../components/ui/app-text";
+import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
+import { Chip } from "../../components/ui/chip";
+import { EmptyState, ErrorState } from "../../components/ui/empty-state";
+import { ListRow, RowIcon } from "../../components/ui/list-row";
+import { Screen } from "../../components/ui/screen";
+import { SectionHeader } from "../../components/ui/section-header";
+import { Skeleton, SkeletonCard } from "../../components/ui/skeleton";
 import { getRank, getRankIndex } from "../../lib/ranks";
 import { supabase } from "../../lib/supabase";
-import { C, R, S } from "../../lib/theme";
+import { categoryTint, color, font, radius, space } from "../../lib/theme";
 
 type Task = {
   id: number;
@@ -28,13 +38,13 @@ const TYPES_FOR: Record<string, string[]> = {
 };
 
 const CATS = [
-  { k: "all", label: "Все", color: C.sageSoft },
-  { k: "clean", label: "🧹 Чистота", color: "#E3EEDC" },
-  { k: "trees", label: "🌳 Деревья", color: "#DDEBD3" },
-  { k: "recycle", label: "♻️ Переработка", color: "#E4EBF2" },
-  { k: "water", label: "💧 Вода", color: "#DCEBF0" },
-  { k: "edu", label: "📚 Просвещение", color: "#F1E8D2" },
-  { k: "animals", label: "🐦 Животные", color: "#F3E4D9" },
+  { k: "all", label: "Все" },
+  { k: "clean", label: "Чистота" },
+  { k: "trees", label: "Деревья" },
+  { k: "recycle", label: "Переработка" },
+  { k: "water", label: "Вода" },
+  { k: "edu", label: "Просвещение" },
+  { k: "animals", label: "Животные" },
 ];
 
 const TIPS = [
@@ -47,7 +57,8 @@ const TIPS = [
   "Кормушка для птиц зимой помогает им пережить холода, но корм нужно подсыпать регулярно.",
 ];
 
-const enter = (i: number) => FadeInDown.delay(i * 70).springify().damping(14);
+// появление блоков — только при первом показе экрана, не больше 5 шагов
+const enter = (i: number) => FadeInDown.delay(Math.min(i, 4) * 60).duration(320);
 
 function calcStreak(dates: string[]) {
   const days = new Set(dates.map((d) => new Date(d).toDateString()));
@@ -61,8 +72,11 @@ function calcStreak(dates: string[]) {
   return streak;
 }
 
+const catLabel = (k: string) => CATS.find((c) => c.k === k)?.label ?? "";
+
 export default function TasksScreen() {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
   const [name, setName] = useState("");
   const [look, setLook] = useState<{ nickname: string | null; emoji: string | null; color: string | null }>({
     nickname: null,
@@ -76,10 +90,12 @@ export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [needConsent, setNeedConsent] = useState(false);
   const [cat, setCat] = useState("all");
   const [streak, setStreak] = useState(0);
   const [done, setDone] = useState(0);
+  const [pending, setPending] = useState(0);
   const [daysSince, setDaysSince] = useState<number | null>(null);
   const [celebrate, setCelebrate] = useState<{ gained: number; rank: { name: string; icon: string } | null } | null>(null);
   const [stats, setStats] = useState<{ done: number; people: number } | null>(null);
@@ -142,6 +158,7 @@ export default function TasksScreen() {
           .in("status", ["approved", "pending"]);
         const all = (subs ?? []) as { created_at: string; status: string }[];
         setDone(all.filter((x) => x.status === "approved").length);
+        setPending(all.filter((x) => x.status === "pending").length);
         setStreak(calcStreak(all.map((x) => x.created_at)));
         if (all.length > 0) {
           const last = new Date(Math.max(...all.map((x) => new Date(x.created_at).getTime())));
@@ -152,6 +169,7 @@ export default function TasksScreen() {
         } else {
           setDaysSince(null);
         }
+        setReady(true);
 
         const { data: st } = await supabase.rpc("get_community_stats");
         if (st) setStats(st as { done: number; people: number });
@@ -171,7 +189,7 @@ export default function TasksScreen() {
         .in("place_type", TYPES_FOR[placeType] ?? ["any"])
         .order("points", { ascending: true });
       if (error) {
-        setError("Ошибка: " + error.message);
+        setError(error.message);
         setTasks([]);
       } else {
         setTasks(data as Task[]);
@@ -179,7 +197,7 @@ export default function TasksScreen() {
       setLoading(false);
     };
     load();
-  }, [placeType]);
+  }, [placeType, reloadKey]);
 
   const open = (t: Task) =>
     router.push({
@@ -191,122 +209,176 @@ export default function TasksScreen() {
   const taskOfDay = tasks.length > 0 ? tasks[dayIndex % tasks.length] : null;
   const tip = TIPS[dayIndex % TIPS.length];
   const shown = tasks.filter((t) => cat === "all" || t.category === cat);
-  const catColor = (k: string) => CATS.find((c) => c.k === k)?.color ?? C.sageSoft;
+  const tint = (k: string) => categoryTint[k] ?? color.limeSoft;
 
   return (
     <>
-      <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <Screen>
         <Animated.View entering={enter(0)} style={s.top}>
           <View style={{ flex: 1 }}>
-            <Text
-              style={s.hello}
+            <Pressable onPress={() => router.push("/place")} hitSlop={8} style={s.placeRow}>
+              <Ionicons name="location-outline" size={14} color={color.muted} />
+              {ready ? (
+                <AppText variant="caption" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {placeName || region} · <Text style={s.change}>изменить</Text>
+                </AppText>
+              ) : (
+                <Skeleton width={140} height={12} />
+              )}
+            </Pressable>
+            <AppText
+              variant="h1"
+              numberOfLines={2}
+              style={{ marginTop: space.x1 }}
               onLongPress={__DEV__ ? () => setCelebrate({ gained: 50, rank: { name: "Побег", icon: "🌿" } }) : undefined}
             >
-              Привет, {look.nickname || name || "друг"}!
-            </Text>
-            <Pressable onPress={() => router.push("/place")}>
-              <Text style={s.place}>📍 {placeName || region}  ·  изменить</Text>
-            </Pressable>
+              Привет, {look.nickname || name || "друг"}
+            </AppText>
           </View>
           <PressScale onPress={() => router.push("/edit-profile")}>
-            <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} size={52} />
+            <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} size={48} />
           </PressScale>
         </Animated.View>
 
         {needConsent && (
           <Animated.View entering={enter(1)} style={s.warn}>
-            <Text style={s.warnTitle}>Ждём согласие родителей</Text>
-            <Text style={s.warnText}>Пока проверяющий не подтвердит согласие, отправлять задания нельзя.</Text>
+            <Ionicons name="shield-checkmark-outline" size={22} color={color.warn} />
+            <View style={{ flex: 1 }}>
+              <AppText variant="bodyStrong" color={color.warn}>
+                Ждём согласие родителей
+              </AppText>
+              <AppText variant="body" color={color.warn}>
+                Пока проверяющий не подтвердит согласие, отправлять задания нельзя.
+              </AppText>
+            </View>
           </Animated.View>
         )}
 
         <Animated.View entering={enter(1)}>
-          <PetCard points={points} streak={streak} daysSince={daysSince} />
+          {ready ? (
+            <PetCard points={points} streak={streak} daysSince={daysSince} approved={done} pending={pending} />
+          ) : (
+            <SkeletonCard height={420} style={{ borderRadius: radius.hero }} />
+          )}
         </Animated.View>
 
-        <Animated.View entering={enter(2)} style={s.miniRow}>
-          <View style={s.mini}>
-            <View style={s.miniTop}>
-              <PulseEmoji emoji="🔥" active={streak > 0} style={s.miniNum} />
-              <CountUp value={streak} style={s.miniNum} />
-            </View>
-            <Text style={s.miniLabel}>дней подряд</Text>
-          </View>
-          <View style={s.mini}>
-            <View style={s.miniTop}>
-              <Text style={s.miniNum}>✅</Text>
-              <CountUp value={done} style={s.miniNum} />
-            </View>
-            <Text style={s.miniLabel}>выполнено</Text>
-          </View>
-        </Animated.View>
-
-        {taskOfDay && (
-          <Animated.View entering={enter(3)} style={{ marginBottom: S.lg }}>
-            <PressScale style={s.hero} scaleTo={0.97} onPress={() => open(taskOfDay)}>
-              <Text style={s.heroLabel}>ЗАДАНИЕ ДНЯ</Text>
-              <Text style={s.heroEmoji}>{taskOfDay.emoji}</Text>
-              <Text style={s.heroTitle}>{taskOfDay.title}</Text>
-              <View style={s.heroBottom}>
-                <Text style={s.heroPts}>+{taskOfDay.points} TZ</Text>
-                <View style={s.heroBtn}>
-                  <Text style={s.heroBtnText}>Начать</Text>
+        {(taskOfDay || (loading && ready)) && (
+          <Animated.View entering={enter(2)}>
+            <SectionHeader title="Задание дня" hint="обновится завтра" />
+            {taskOfDay ? (
+              <Card onPress={() => open(taskOfDay)}>
+                <View style={s.dayTop}>
+                  <View style={[s.dayIcon, { backgroundColor: tint(taskOfDay.category) }]}>
+                    <Text style={{ fontSize: 28 }}>{taskOfDay.emoji}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    {catLabel(taskOfDay.category) ? <AppText variant="overline">{catLabel(taskOfDay.category)}</AppText> : null}
+                    <AppText variant="h3" style={{ marginTop: 2 }}>
+                      {taskOfDay.title}
+                    </AppText>
+                  </View>
                 </View>
-              </View>
-            </PressScale>
+                <View style={s.dayBottom}>
+                  <View style={s.dayHint}>
+                    <Ionicons name="camera-outline" size={16} color={color.muted} />
+                    <AppText variant="caption">фото до и после</AppText>
+                  </View>
+                  <Button label={`+${taskOfDay.points} TZ · Начать`} onPress={() => open(taskOfDay)} style={s.dayBtn} />
+                </View>
+              </Card>
+            ) : (
+              <SkeletonCard height={150} />
+            )}
           </Animated.View>
         )}
 
+        <Animated.View entering={enter(3)}>
+          <SectionHeader title="Все задания" hint={!loading && !error ? `${shown.length}` : undefined} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.chips}
+            contentContainerStyle={{ paddingHorizontal: space.gutter }}
+          >
+            {CATS.map((c) => (
+              <Chip key={c.k} label={c.label} active={cat === c.k} onPress={() => setCat(c.k)} />
+            ))}
+          </ScrollView>
+
+          {loading && (
+            <View style={{ gap: space.x3, marginTop: space.x3 }}>
+              <Skeleton height={48} round={12} />
+              <Skeleton height={48} round={12} />
+              <Skeleton height={48} round={12} />
+            </View>
+          )}
+          {!loading && error && <ErrorState onRetry={() => setReloadKey((k) => k + 1)} />}
+          {!loading && !error && tasks.length === 0 && (
+            <EmptyState
+              icon="leaf-outline"
+              title="Задания скоро появятся"
+              text="Для вашего места пока нет заданий. Загляните позже или выберите другое место."
+              action="Изменить место"
+              onAction={() => router.push("/place")}
+            />
+          )}
+          {!loading && !error && tasks.length > 0 && shown.length === 0 && (
+            <EmptyState icon="search-outline" title="В этой категории пусто" text="Выберите другую категорию." />
+          )}
+
+          {!loading && !error && shown.length > 0 && (
+            <Animated.View key={cat} entering={FadeIn.duration(200)} style={{ marginTop: space.x2 }}>
+              {shown.map((t, i) => (
+                <ListRow
+                  key={t.id}
+                  first={i === 0}
+                  title={t.title}
+                  subtitle={catLabel(t.category)}
+                  onPress={() => open(t)}
+                  leading={
+                    <RowIcon tint={tint(t.category)}>
+                      <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
+                    </RowIcon>
+                  }
+                  trailing={<AppText style={s.rowPts}>+{t.points}</AppText>}
+                />
+              ))}
+            </Animated.View>
+          )}
+        </Animated.View>
+
         {stats && (
-          <Animated.View entering={enter(4)} style={s.impact}>
-            <Text style={s.impactTitle}>🌍 Вместе мы</Text>
+          <Card variant="sand" style={s.impact}>
+            <AppText variant="overline" color={color.ink}>
+              Вместе мы
+            </AppText>
             <View style={s.impactRow}>
               <View style={{ flex: 1 }}>
                 <CountUp value={stats.done} style={s.impactNum} />
-                <Text style={s.impactLabel}>заданий выполнено</Text>
+                <AppText variant="caption" color={color.ink}>
+                  заданий выполнено
+                </AppText>
               </View>
               <View style={{ flex: 1 }}>
                 <CountUp value={stats.people} style={s.impactNum} />
-                <Text style={s.impactLabel}>участников</Text>
+                <AppText variant="caption" color={color.ink}>
+                  участников
+                </AppText>
               </View>
             </View>
-          </Animated.View>
+          </Card>
         )}
 
-        <Text style={s.section}>Все задания</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: S.md }}>
-          {CATS.map((c) => (
-            <PressScale key={c.k} onPress={() => setCat(c.k)} style={[s.chip, cat === c.k && s.chipOn]}>
-              <Text style={[s.chipText, cat === c.k && s.chipTextOn]}>{c.label}</Text>
-            </PressScale>
-          ))}
-        </ScrollView>
-
-        {loading && <ActivityIndicator color={C.sageDark} style={{ marginTop: S.md }} />}
-        {error && <Text style={{ color: C.danger }}>{error}</Text>}
-        {!loading && shown.length === 0 && <Text style={{ color: C.muted }}>В этой категории пока нет заданий.</Text>}
-
-        <View style={s.grid}>
-          {shown.map((t, i) => (
-            <Animated.View key={`${cat}-${t.id}`} entering={FadeInDown.delay(Math.min(i, 8) * 55).springify().damping(14)} style={s.tileWrap}>
-              <PressScale style={[s.tile, { backgroundColor: catColor(t.category) }]} onPress={() => open(t)}>
-                <Text style={s.tileEmoji}>{t.emoji}</Text>
-                <Text style={s.tileTitle} numberOfLines={3}>
-                  {t.title}
-                </Text>
-                <View style={s.tilePts}>
-                  <Text style={s.tilePtsText}>+{t.points} TZ</Text>
-                </View>
-              </PressScale>
-            </Animated.View>
-          ))}
-        </View>
-
         <View style={s.tip}>
-          <Text style={s.tipTitle}>💡 Эко-факт дня</Text>
-          <Text style={s.tipText}>{tip}</Text>
+          <View style={s.tipHead}>
+            <Ionicons name="bulb-outline" size={16} color={color.forest} />
+            <AppText variant="overline" color={color.forest}>
+              Эко-факт дня
+            </AppText>
+          </View>
+          <AppText variant="body">{tip}</AppText>
         </View>
-      </ScrollView>
+      </Screen>
 
       <Celebration
         visible={celebrate !== null}
@@ -319,45 +391,27 @@ export default function TasksScreen() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
-  content: { padding: S.md + 4, paddingTop: 70, paddingBottom: S.xl + 30 },
-  top: { flexDirection: "row", alignItems: "center", marginBottom: S.lg },
-  hello: { fontSize: 28, fontWeight: "700", color: C.text },
-  place: { color: C.muted, marginTop: 6 },
-  warn: { backgroundColor: C.warnSoft, borderRadius: R.card, padding: S.md, marginBottom: S.md },
-  warnTitle: { color: C.warn, fontWeight: "700", fontSize: 16, marginBottom: 6 },
-  warnText: { color: C.warn, lineHeight: 21 },
-  miniRow: { flexDirection: "row", gap: S.sm + 2, marginBottom: S.lg },
-  mini: { flex: 1, backgroundColor: C.card, borderRadius: R.card, padding: S.md - 4, alignItems: "center" },
-  miniTop: { flexDirection: "row", alignItems: "center", gap: 6 },
-  miniNum: { fontSize: 20, fontWeight: "800", color: C.text },
-  miniLabel: { fontSize: 12, color: C.muted, marginTop: 4 },
-  hero: { backgroundColor: C.sage, borderRadius: 30, padding: S.lg },
-  heroLabel: { fontSize: 12, fontWeight: "800", letterSpacing: 1.5, color: C.text, opacity: 0.6 },
-  heroEmoji: { fontSize: 56, marginTop: S.sm },
-  heroTitle: { fontSize: 24, fontWeight: "700", color: C.text, marginTop: S.sm },
-  heroBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: S.md },
-  heroPts: { fontSize: 22, fontWeight: "800", color: C.text },
-  heroBtn: { backgroundColor: "#FFFFFF", borderRadius: R.chip, paddingHorizontal: 22, paddingVertical: 12 },
-  heroBtnText: { color: C.sageDark, fontWeight: "800" },
-  impact: { backgroundColor: C.sand, borderRadius: R.card, padding: S.md + 4, marginBottom: S.xl },
-  impactTitle: { fontSize: 16, fontWeight: "700", color: C.text, marginBottom: S.sm },
-  impactRow: { flexDirection: "row" },
-  impactNum: { fontSize: 32, fontWeight: "800", color: C.text },
-  impactLabel: { fontSize: 12, color: C.text, opacity: 0.7, marginTop: 2 },
-  section: { fontSize: 22, fontWeight: "700", color: C.text, marginBottom: S.md },
-  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: R.chip, backgroundColor: C.card, marginRight: S.sm },
-  chipOn: { backgroundColor: C.sage },
-  chipText: { color: C.muted, fontWeight: "600" },
-  chipTextOn: { color: C.text },
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
-  tileWrap: { width: "48%", marginBottom: S.sm + 6 },
-  tile: { borderRadius: 26, padding: S.md, minHeight: 190, justifyContent: "space-between" },
-  tileEmoji: { fontSize: 36 },
-  tileTitle: { fontSize: 15, fontWeight: "700", color: C.text, lineHeight: 20, marginTop: S.sm },
-  tilePts: { alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.75)", borderRadius: R.chip, paddingHorizontal: 12, paddingVertical: 6, marginTop: S.sm },
-  tilePtsText: { fontWeight: "800", color: C.sageDark, fontSize: 13 },
-  tip: { backgroundColor: C.sageSoft, borderRadius: R.card, padding: S.md + 4, marginTop: S.md },
-  tipTitle: { fontWeight: "700", color: C.sageDark, marginBottom: 6 },
-  tipText: { color: C.text, lineHeight: 22 },
+  top: { flexDirection: "row", alignItems: "center", gap: space.x3, marginBottom: space.x5 },
+  placeRow: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start" },
+  change: { textDecorationLine: "underline" },
+  warn: {
+    flexDirection: "row",
+    gap: space.x3,
+    backgroundColor: color.warnSoft,
+    borderRadius: radius.card,
+    padding: space.x4,
+    marginBottom: space.x4,
+  },
+  dayTop: { flexDirection: "row", gap: space.x3, alignItems: "flex-start" },
+  dayIcon: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  dayBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.x2, marginTop: space.x4 },
+  dayHint: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 },
+  dayBtn: { minHeight: 44, paddingHorizontal: space.x4 },
+  chips: { marginHorizontal: -space.gutter, flexGrow: 0 },
+  rowPts: { fontFamily: font.bold, fontSize: 14, color: color.forest },
+  impact: { marginTop: space.x6 },
+  impactRow: { flexDirection: "row", marginTop: space.x3 },
+  impactNum: { fontFamily: font.display, fontSize: 30, lineHeight: 36, color: color.ink },
+  tip: { backgroundColor: color.limeSoft, borderRadius: radius.card, padding: space.x4, marginTop: space.x3 },
+  tipHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: space.x2 },
 });
