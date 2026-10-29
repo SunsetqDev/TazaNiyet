@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
@@ -33,6 +33,21 @@ export default function PlaceScreen() {
   const [type, setType] = useState("");
   const [placeName, setPlaceName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // при смене места подставляем то, что уже сохранено в профиле
+  useEffect(() => {
+    const load = async () => {
+      const { data: s } = await supabase.auth.getSession();
+      const user = s.session?.user;
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("region, place_type, place_name").eq("id", user.id).single();
+      if (!data) return;
+      if (data.region) setRegion(data.region);
+      if (data.place_type) setType(data.place_type);
+      if (data.place_name) setPlaceName(data.place_name);
+    };
+    load();
+  }, []);
 
   const save = async () => {
     if (!region || !type) {
