@@ -133,10 +133,10 @@ RPC и их параметров — это сломает приложение 
    ```
    (при проблемах с зависимостями — `npx expo-doctor`).
 
-   **Известное исходное состояние (30.10.2026)** — эти ошибки были до начала работы, новые не добавлять:
-   - `tsc`: 10 ошибок — `(tabs)/_layout.tsx` (тип `color` в `tabBarIcon` должен быть `ColorValue`, не `string`),
-     `moderator.tsx:64–65` (`null` вместо `undefined` для signed URL), неиспользуемые файлы шаблона
-     `animated-icon.web.tsx`, `app-tabs.web.tsx`, `constants/theme.ts` (импорт CSS).
+   **Состояние проверок (30.10.2026):**
+   - `tsc` проходит без ошибок — держать так. Для типов CSS и typed routes нужен файл `expo-env.d.ts`
+     (в `.gitignore`, создаётся автоматически при `npx expo start`; если его нет — создать с
+     `/// <reference types="expo/types" />`).
    - `expo lint` (ESLint 9 + `eslint-config-expo`, конфиг `eslint.config.js`) падает с
      «Cannot find native binding» у `unrs-resolver`: npm заблокировал его postinstall-скрипт.
      Лечится `npm install-scripts approve unrs-resolver` + переустановкой — только с согласия владельца.

@@ -61,8 +61,8 @@ export default function ModeratorScreen() {
         id: r.id,
         created_at: r.created_at,
         tasks: r.tasks,
-        beforeUrl: signed?.[0]?.signedUrl,
-        afterUrl: signed?.[1]?.signedUrl,
+        beforeUrl: signed?.[0]?.signedUrl ?? undefined,
+        afterUrl: signed?.[1]?.signedUrl ?? undefined,
       });
     }
     setItems(result);
