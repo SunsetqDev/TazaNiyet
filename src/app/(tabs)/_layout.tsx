@@ -37,6 +37,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // на Android иначе панель поднимается над клавиатурой (поиск во «Вузах»)
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: color.forest,
         tabBarInactiveTintColor: color.muted,
         tabBarStyle: {
