@@ -1,8 +1,13 @@
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { CountUp, PressScale, PulseEmoji } from "../../components/anim";
 import { Avatar } from "../../components/avatar";
+import { Celebration } from "../../components/celebration";
 import { PetCard } from "../../components/pet-card";
+import { getRank, getRankIndex } from "../../lib/ranks";
 import { supabase } from "../../lib/supabase";
 import { C, R, S } from "../../lib/theme";
 
@@ -42,6 +47,8 @@ const TIPS = [
   "Кормушка для птиц зимой помогает им пережить холода, но корм нужно подсыпать регулярно.",
 ];
 
+const enter = (i: number) => FadeInDown.delay(i * 70).springify().damping(14);
+
 function calcStreak(dates: string[]) {
   const days = new Set(dates.map((d) => new Date(d).toDateString()));
   let streak = 0;
@@ -74,66 +81,84 @@ export default function TasksScreen() {
   const [streak, setStreak] = useState(0);
   const [done, setDone] = useState(0);
   const [daysSince, setDaysSince] = useState<number | null>(null);
+  const [celebrate, setCelebrate] = useState<{ gained: number; rank: { name: string; icon: string } | null } | null>(null);
   const [stats, setStats] = useState<{ done: number; people: number } | null>(null);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      const { data: s } = await supabase.auth.getSession();
-      const user = s.session?.user;
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-      const { data } = await supabase
-        .from("profiles")
-        .select("name, nickname, avatar_emoji, avatar_color, points, region, place_name, place_type, birth_year, parent_verified")
-        .eq("id", user.id)
-        .single();
-      if (!data || !data.birth_year) {
-        router.replace("/safety");
-        return;
-      }
-      if (!data.region || !data.place_type) {
-        router.replace("/place");
-        return;
-      }
-      setName(data.name ?? "");
-      setLook({
-        nickname: data.nickname ?? null,
-        emoji: data.avatar_emoji ?? null,
-        color: data.avatar_color ?? null,
-      });
-      setPoints(data.points ?? 0);
-      setRegion(data.region);
-      setPlaceName(data.place_name ?? "");
-      setPlaceType(data.place_type);
-      const age = new Date().getFullYear() - data.birth_year;
-      setNeedConsent(age <= 14 && !data.parent_verified);
+  useFocusEffect(
+    useCallback(() => {
+      const loadProfile = async () => {
+        const { data: s } = await supabase.auth.getSession();
+        const user = s.session?.user;
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
+        const { data } = await supabase
+          .from("profiles")
+          .select("name, nickname, avatar_emoji, avatar_color, points, region, place_name, place_type, birth_year, parent_verified")
+          .eq("id", user.id)
+          .single();
+        if (!data || !data.birth_year) {
+          router.replace("/safety");
+          return;
+        }
+        if (!data.region || !data.place_type) {
+          router.replace("/place");
+          return;
+        }
+        setName(data.name ?? "");
+        setLook({
+          nickname: data.nickname ?? null,
+          emoji: data.avatar_emoji ?? null,
+          color: data.avatar_color ?? null,
+        });
+        const nowPts: number = data.points ?? 0;
+        setPoints(nowPts);
 
-      // approved и pending считаем активностью: баобаб оживает сразу после отправки задания
-      const { data: subs } = await supabase
-        .from("submissions")
-        .select("created_at, status")
-        .eq("user_id", user.id)
-        .in("status", ["approved", "pending"]);
-      const all = (subs ?? []) as { created_at: string; status: string }[];
-      setDone(all.filter((x) => x.status === "approved").length);
-      setStreak(calcStreak(all.map((x) => x.created_at)));
-      if (all.length > 0) {
-        const last = new Date(Math.max(...all.map((x) => new Date(x.created_at).getTime())));
-        last.setHours(0, 0, 0, 0);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        setDaysSince(Math.round((today.getTime() - last.getTime()) / 86400000));
-      } else {
-        setDaysSince(null);
-      }
+        // праздник, если с прошлого раза очков стало больше (задание одобрили)
+        const key = `tz:lastPoints:${user.id}`;
+        const prevRaw = await AsyncStorage.getItem(key);
+        if (prevRaw !== null) {
+          const prev = parseInt(prevRaw, 10);
+          if (!Number.isNaN(prev) && nowPts > prev) {
+            const rankUp = getRankIndex(nowPts) > getRankIndex(prev);
+            const r = getRank(nowPts);
+            setCelebrate({ gained: nowPts - prev, rank: rankUp ? { name: r.name, icon: r.icon } : null });
+          }
+        }
+        await AsyncStorage.setItem(key, String(nowPts));
 
-      const { data: st } = await supabase.rpc("get_community_stats");
-      if (st) setStats(st as { done: number; people: number });
-    };
-    loadProfile();
-  }, []);
+        setRegion(data.region);
+        setPlaceName(data.place_name ?? "");
+        setPlaceType(data.place_type);
+        const age = new Date().getFullYear() - data.birth_year;
+        setNeedConsent(age <= 14 && !data.parent_verified);
+
+        // approved и pending считаем активностью: баобаб оживает сразу после отправки задания
+        const { data: subs } = await supabase
+          .from("submissions")
+          .select("created_at, status")
+          .eq("user_id", user.id)
+          .in("status", ["approved", "pending"]);
+        const all = (subs ?? []) as { created_at: string; status: string }[];
+        setDone(all.filter((x) => x.status === "approved").length);
+        setStreak(calcStreak(all.map((x) => x.created_at)));
+        if (all.length > 0) {
+          const last = new Date(Math.max(...all.map((x) => new Date(x.created_at).getTime())));
+          last.setHours(0, 0, 0, 0);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          setDaysSince(Math.round((today.getTime() - last.getTime()) / 86400000));
+        } else {
+          setDaysSince(null);
+        }
+
+        const { data: st } = await supabase.rpc("get_community_stats");
+        if (st) setStats(st as { done: number; people: number });
+      };
+      loadProfile();
+    }, [])
+  );
 
   useEffect(() => {
     if (!placeType) return;
@@ -169,101 +194,127 @@ export default function TasksScreen() {
   const catColor = (k: string) => CATS.find((c) => c.k === k)?.color ?? C.sageSoft;
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-      <View style={s.top}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.hello}>Привет, {look.nickname || name || "друг"}!</Text>
-          <Pressable onPress={() => router.push("/place")}>
-            <Text style={s.place}>📍 {placeName || region}  ·  изменить</Text>
-          </Pressable>
-        </View>
-        <Pressable onPress={() => router.push("/edit-profile")}>
-          <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} size={52} />
-        </Pressable>
-      </View>
-
-      {needConsent && (
-        <View style={s.warn}>
-          <Text style={s.warnTitle}>Ждём согласие родителей</Text>
-          <Text style={s.warnText}>Пока проверяющий не подтвердит согласие, отправлять задания нельзя.</Text>
-        </View>
-      )}
-
-      <PetCard points={points} streak={streak} daysSince={daysSince} />
-
-      <View style={s.miniRow}>
-        <View style={s.mini}>
-          <Text style={s.miniNum}>🔥 {streak}</Text>
-          <Text style={s.miniLabel}>дней подряд</Text>
-        </View>
-        <View style={s.mini}>
-          <Text style={s.miniNum}>✅ {done}</Text>
-          <Text style={s.miniLabel}>выполнено</Text>
-        </View>
-      </View>
-
-      {taskOfDay && (
-        <Pressable style={s.hero} onPress={() => open(taskOfDay)}>
-          <Text style={s.heroLabel}>ЗАДАНИЕ ДНЯ</Text>
-          <Text style={s.heroEmoji}>{taskOfDay.emoji}</Text>
-          <Text style={s.heroTitle}>{taskOfDay.title}</Text>
-          <View style={s.heroBottom}>
-            <Text style={s.heroPts}>+{taskOfDay.points} TZ</Text>
-            <View style={s.heroBtn}>
-              <Text style={s.heroBtnText}>Начать</Text>
-            </View>
+    <>
+      <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <Animated.View entering={enter(0)} style={s.top}>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={s.hello}
+              onLongPress={__DEV__ ? () => setCelebrate({ gained: 50, rank: { name: "Побег", icon: "🌿" } }) : undefined}
+            >
+              Привет, {look.nickname || name || "друг"}!
+            </Text>
+            <Pressable onPress={() => router.push("/place")}>
+              <Text style={s.place}>📍 {placeName || region}  ·  изменить</Text>
+            </Pressable>
           </View>
-        </Pressable>
-      )}
+          <PressScale onPress={() => router.push("/edit-profile")}>
+            <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} size={52} />
+          </PressScale>
+        </Animated.View>
 
-      {stats && (
-        <View style={s.impact}>
-          <Text style={s.impactTitle}>🌍 Вместе мы</Text>
-          <View style={s.impactRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.impactNum}>{stats.done}</Text>
-              <Text style={s.impactLabel}>заданий выполнено</Text>
+        {needConsent && (
+          <Animated.View entering={enter(1)} style={s.warn}>
+            <Text style={s.warnTitle}>Ждём согласие родителей</Text>
+            <Text style={s.warnText}>Пока проверяющий не подтвердит согласие, отправлять задания нельзя.</Text>
+          </Animated.View>
+        )}
+
+        <Animated.View entering={enter(1)}>
+          <PetCard points={points} streak={streak} daysSince={daysSince} />
+        </Animated.View>
+
+        <Animated.View entering={enter(2)} style={s.miniRow}>
+          <View style={s.mini}>
+            <View style={s.miniTop}>
+              <PulseEmoji emoji="🔥" active={streak > 0} style={s.miniNum} />
+              <CountUp value={streak} style={s.miniNum} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.impactNum}>{stats.people}</Text>
-              <Text style={s.impactLabel}>участников</Text>
-            </View>
+            <Text style={s.miniLabel}>дней подряд</Text>
           </View>
-        </View>
-      )}
+          <View style={s.mini}>
+            <View style={s.miniTop}>
+              <Text style={s.miniNum}>✅</Text>
+              <CountUp value={done} style={s.miniNum} />
+            </View>
+            <Text style={s.miniLabel}>выполнено</Text>
+          </View>
+        </Animated.View>
 
-      <Text style={s.section}>Все задания</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: S.md }}>
-        {CATS.map((c) => (
-          <Pressable key={c.k} onPress={() => setCat(c.k)} style={[s.chip, cat === c.k && s.chipOn]}>
-            <Text style={[s.chipText, cat === c.k && s.chipTextOn]}>{c.label}</Text>
-          </Pressable>
-        ))}
+        {taskOfDay && (
+          <Animated.View entering={enter(3)} style={{ marginBottom: S.lg }}>
+            <PressScale style={s.hero} scaleTo={0.97} onPress={() => open(taskOfDay)}>
+              <Text style={s.heroLabel}>ЗАДАНИЕ ДНЯ</Text>
+              <Text style={s.heroEmoji}>{taskOfDay.emoji}</Text>
+              <Text style={s.heroTitle}>{taskOfDay.title}</Text>
+              <View style={s.heroBottom}>
+                <Text style={s.heroPts}>+{taskOfDay.points} TZ</Text>
+                <View style={s.heroBtn}>
+                  <Text style={s.heroBtnText}>Начать</Text>
+                </View>
+              </View>
+            </PressScale>
+          </Animated.View>
+        )}
+
+        {stats && (
+          <Animated.View entering={enter(4)} style={s.impact}>
+            <Text style={s.impactTitle}>🌍 Вместе мы</Text>
+            <View style={s.impactRow}>
+              <View style={{ flex: 1 }}>
+                <CountUp value={stats.done} style={s.impactNum} />
+                <Text style={s.impactLabel}>заданий выполнено</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <CountUp value={stats.people} style={s.impactNum} />
+                <Text style={s.impactLabel}>участников</Text>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+
+        <Text style={s.section}>Все задания</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: S.md }}>
+          {CATS.map((c) => (
+            <PressScale key={c.k} onPress={() => setCat(c.k)} style={[s.chip, cat === c.k && s.chipOn]}>
+              <Text style={[s.chipText, cat === c.k && s.chipTextOn]}>{c.label}</Text>
+            </PressScale>
+          ))}
+        </ScrollView>
+
+        {loading && <ActivityIndicator color={C.sageDark} style={{ marginTop: S.md }} />}
+        {error && <Text style={{ color: C.danger }}>{error}</Text>}
+        {!loading && shown.length === 0 && <Text style={{ color: C.muted }}>В этой категории пока нет заданий.</Text>}
+
+        <View style={s.grid}>
+          {shown.map((t, i) => (
+            <Animated.View key={`${cat}-${t.id}`} entering={FadeInDown.delay(Math.min(i, 8) * 55).springify().damping(14)} style={s.tileWrap}>
+              <PressScale style={[s.tile, { backgroundColor: catColor(t.category) }]} onPress={() => open(t)}>
+                <Text style={s.tileEmoji}>{t.emoji}</Text>
+                <Text style={s.tileTitle} numberOfLines={3}>
+                  {t.title}
+                </Text>
+                <View style={s.tilePts}>
+                  <Text style={s.tilePtsText}>+{t.points} TZ</Text>
+                </View>
+              </PressScale>
+            </Animated.View>
+          ))}
+        </View>
+
+        <View style={s.tip}>
+          <Text style={s.tipTitle}>💡 Эко-факт дня</Text>
+          <Text style={s.tipText}>{tip}</Text>
+        </View>
       </ScrollView>
 
-      {loading && <ActivityIndicator color={C.sageDark} style={{ marginTop: S.md }} />}
-      {error && <Text style={{ color: C.danger }}>{error}</Text>}
-      {!loading && shown.length === 0 && <Text style={{ color: C.muted }}>В этой категории пока нет заданий.</Text>}
-
-      <View style={s.grid}>
-        {shown.map((t) => (
-          <Pressable key={t.id} style={[s.tile, { backgroundColor: catColor(t.category) }]} onPress={() => open(t)}>
-            <Text style={s.tileEmoji}>{t.emoji}</Text>
-            <Text style={s.tileTitle} numberOfLines={3}>
-              {t.title}
-            </Text>
-            <View style={s.tilePts}>
-              <Text style={s.tilePtsText}>+{t.points} TZ</Text>
-            </View>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={s.tip}>
-        <Text style={s.tipTitle}>💡 Эко-факт дня</Text>
-        <Text style={s.tipText}>{tip}</Text>
-      </View>
-    </ScrollView>
+      <Celebration
+        visible={celebrate !== null}
+        gained={celebrate?.gained ?? 0}
+        rank={celebrate?.rank ?? null}
+        onClose={() => setCelebrate(null)}
+      />
+    </>
   );
 }
 
@@ -278,9 +329,10 @@ const s = StyleSheet.create({
   warnText: { color: C.warn, lineHeight: 21 },
   miniRow: { flexDirection: "row", gap: S.sm + 2, marginBottom: S.lg },
   mini: { flex: 1, backgroundColor: C.card, borderRadius: R.card, padding: S.md - 4, alignItems: "center" },
+  miniTop: { flexDirection: "row", alignItems: "center", gap: 6 },
   miniNum: { fontSize: 20, fontWeight: "800", color: C.text },
   miniLabel: { fontSize: 12, color: C.muted, marginTop: 4 },
-  hero: { backgroundColor: C.sage, borderRadius: 30, padding: S.lg, marginBottom: S.lg },
+  hero: { backgroundColor: C.sage, borderRadius: 30, padding: S.lg },
   heroLabel: { fontSize: 12, fontWeight: "800", letterSpacing: 1.5, color: C.text, opacity: 0.6 },
   heroEmoji: { fontSize: 56, marginTop: S.sm },
   heroTitle: { fontSize: 24, fontWeight: "700", color: C.text, marginTop: S.sm },
@@ -299,7 +351,8 @@ const s = StyleSheet.create({
   chipText: { color: C.muted, fontWeight: "600" },
   chipTextOn: { color: C.text },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
-  tile: { width: "48%", borderRadius: 26, padding: S.md, marginBottom: S.sm + 6, minHeight: 190, justifyContent: "space-between" },
+  tileWrap: { width: "48%", marginBottom: S.sm + 6 },
+  tile: { borderRadius: 26, padding: S.md, minHeight: 190, justifyContent: "space-between" },
   tileEmoji: { fontSize: 36 },
   tileTitle: { fontSize: 15, fontWeight: "700", color: C.text, lineHeight: 20, marginTop: S.sm },
   tilePts: { alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.75)", borderRadius: R.chip, paddingHorizontal: 12, paddingVertical: 6, marginTop: S.sm },

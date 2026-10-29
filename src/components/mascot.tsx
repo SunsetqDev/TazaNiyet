@@ -1,6 +1,8 @@
 import { useEffect } from "react";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import { Pressable, StyleSheet } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Ellipse, G, Path } from "react-native-svg";
+import { haptic } from "../lib/haptics";
 
 export type MascotMood = "happy" | "sad" | "cheer";
 
@@ -16,8 +18,30 @@ const GREEN_D = "#4F8A45";
 const star = (x: number, y: number, s: number) =>
   `M${x} ${y - 9 * s} L${x + 2.5 * s} ${y - 2.5 * s} L${x + 9 * s} ${y} L${x + 2.5 * s} ${y + 2.5 * s} L${x} ${y + 9 * s} L${x - 2.5 * s} ${y + 2.5 * s} L${x - 9 * s} ${y} L${x - 2.5 * s} ${y - 2.5 * s}Z`;
 
+function Eyes({ py }: { py: number }) {
+  return (
+    <>
+      <Ellipse cx={74} cy={92} rx={13} ry={15} fill="#FFFFFF" />
+      <Ellipse cx={126} cy={92} rx={13} ry={15} fill="#FFFFFF" />
+      <Circle cx={75} cy={py} r={8.5} fill={DARK} />
+      <Circle cx={125} cy={py} r={8.5} fill={DARK} />
+      <Circle cx={78} cy={py - 3} r={3} fill="#FFFFFF" />
+      <Circle cx={128} cy={py - 3} r={3} fill="#FFFFFF" />
+    </>
+  );
+}
+
+/** Только глаза: лежат поверх лица и сплющиваются при моргании. */
+function EyesOverlay({ mood, size }: { mood: MascotMood; size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 6 200 200">
+      <Eyes py={mood === "sad" ? 96 : 93} />
+    </Svg>
+  );
+}
+
 /** Барс — снежный барс, лицо приложения. Рисуется векторно, без картинок. */
-export function MascotArt({ mood = "happy", size = 120 }: { mood?: MascotMood; size?: number }) {
+export function MascotArt({ mood = "happy", size = 120, hideEyes = false }: { mood?: MascotMood; size?: number; hideEyes?: boolean }) {
   const sad = mood === "sad";
   const cheer = mood === "cheer";
   const py = sad ? 96 : 93;
@@ -64,15 +88,8 @@ export function MascotArt({ mood = "happy", size = 120 }: { mood?: MascotMood; s
           <Path d="M62 94 Q74 78 86 94" stroke={DARK} strokeWidth={5} fill="none" strokeLinecap="round" />
           <Path d="M114 94 Q126 78 138 94" stroke={DARK} strokeWidth={5} fill="none" strokeLinecap="round" />
         </>
-      ) : (
-        <>
-          <Ellipse cx={74} cy={92} rx={13} ry={15} fill="#FFFFFF" />
-          <Ellipse cx={126} cy={92} rx={13} ry={15} fill="#FFFFFF" />
-          <Circle cx={75} cy={py} r={8.5} fill={DARK} />
-          <Circle cx={125} cy={py} r={8.5} fill={DARK} />
-          <Circle cx={78} cy={py - 3} r={3} fill="#FFFFFF" />
-          <Circle cx={128} cy={py - 3} r={3} fill="#FFFFFF" />
-        </>
+      ) : hideEyes ? null : (
+        <Eyes py={py} />
       )}
       {sad && (
         <>
@@ -119,14 +136,20 @@ export function MascotArt({ mood = "happy", size = 120 }: { mood?: MascotMood; s
   );
 }
 
-/** Тот же Барс, но он «дышит»: слегка покачивается. Весёлый прыгает, грустный еле двигается. */
-export function Mascot({ mood = "happy", size = 120 }: { mood?: MascotMood; size?: number }) {
-  const y = useSharedValue(0);
+/**
+ * Живой Барс: дышит, моргает, прыгает от радости и подпрыгивает, если на него нажать.
+ */
+export function Mascot({ mood = "happy", size = 120, onTap }: { mood?: MascotMood; size?: number; onTap?: () => void }) {
+  const bob = useSharedValue(0);
+  const jump = useSharedValue(0);
+  const squish = useSharedValue(1);
+  const blink = useSharedValue(1);
 
+  // дыхание: весёлый прыгает, грустный еле двигается
   useEffect(() => {
     const amp = mood === "cheer" ? -10 : mood === "sad" ? -2 : -5;
     const dur = mood === "cheer" ? 380 : mood === "sad" ? 1600 : 1000;
-    y.value = withRepeat(
+    bob.value = withRepeat(
       withSequence(
         withTiming(amp, { duration: dur, easing: Easing.inOut(Easing.quad) }),
         withTiming(0, { duration: dur, easing: Easing.inOut(Easing.quad) })
@@ -136,11 +159,46 @@ export function Mascot({ mood = "happy", size = 120 }: { mood?: MascotMood; size
     );
   }, [mood]);
 
-  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  // моргание раз в несколько секунд
+  useEffect(() => {
+    blink.value = withRepeat(
+      withSequence(withDelay(3200, withTiming(0.08, { duration: 90 })), withTiming(1, { duration: 120 })),
+      -1,
+      false
+    );
+  }, []);
+
+  const hop = () => {
+    jump.value = withSequence(withTiming(-26, { duration: 150, easing: Easing.out(Easing.quad) }), withSpring(0, { damping: 6, stiffness: 180 }));
+    squish.value = withSequence(withTiming(0.88, { duration: 90 }), withTiming(1.08, { duration: 140 }), withSpring(1, { damping: 8 }));
+  };
+
+  // при смене настроения Барс коротко подпрыгивает
+  useEffect(() => {
+    hop();
+  }, [mood]);
+
+  const bodyStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bob.value + jump.value }, { scaleY: squish.value }, { scaleX: 2 - squish.value }],
+  }));
+  const blinkStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: blink.value }] }));
 
   return (
-    <Animated.View style={style}>
-      <MascotArt mood={mood} size={size} />
-    </Animated.View>
+    <Pressable
+      onPress={() => {
+        haptic.light();
+        hop();
+        onTap?.();
+      }}
+    >
+      <Animated.View style={[{ width: size, height: size, transformOrigin: "50% 100%" }, bodyStyle]}>
+        <MascotArt mood={mood} size={size} hideEyes={mood !== "cheer"} />
+        {mood !== "cheer" && (
+          <Animated.View style={[StyleSheet.absoluteFill, { transformOrigin: "50% 43%" }, blinkStyle]}>
+            <EyesOverlay mood={mood} size={size} />
+          </Animated.View>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 }
