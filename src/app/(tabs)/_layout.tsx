@@ -1,28 +1,28 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { View } from "react-native";
-import Animated, { ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { color, font, radius } from "../../lib/theme";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
+// размер «пилюли»; библиотека по умолчанию даёт иконке коробку 24×24 — расширяем её через tabBarIconStyle
+const PILL = { width: 56, height: 32 };
+
 // активная вкладка — иконка на лаймовой «пилюле»
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
-  if (!focused) {
-    return (
-      <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-        <Ionicons name={name} size={22} color={color.muted} />
-      </View>
-    );
-  }
   return (
-    <Animated.View
-      entering={ZoomIn.duration(180)}
-      style={{ backgroundColor: color.lime, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 4 }}
+    <View
+      style={{
+        ...PILL,
+        borderRadius: radius.pill,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: focused ? color.lime : "transparent",
+      }}
     >
-      <Ionicons name={name} size={22} color={color.forest} />
-    </Animated.View>
+      <Ionicons name={name} size={22} color={focused ? color.forest : color.muted} />
+    </View>
   );
 }
 
@@ -41,16 +41,17 @@ export default function TabsLayout() {
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: color.forest,
         tabBarInactiveTintColor: color.muted,
+        tabBarIconStyle: PILL,
         tabBarStyle: {
           backgroundColor: color.surface,
           borderTopColor: color.line,
           borderTopWidth: 1,
-          height: 64 + insets.bottom,
+          height: 68 + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom + 8,
           elevation: 0,
         },
-        tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11, marginTop: 2 },
+        tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11, marginTop: 4 },
       }}
     >
       <Tabs.Screen name="index" options={tab("Задания", "leaf-outline", "leaf")} />
