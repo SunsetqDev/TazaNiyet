@@ -128,7 +128,7 @@ RPC и их параметров — это сломает приложение 
 
 ### Дизайн-система «Тихий лес»
 
-Редизайн всех экранов (этапы 0–6) выполнен 30.10.2026 в ветке GitHub `redesign` (SunsetqDev/TazaNiyet; локально — `redesign-github` в «ДокументыTazaNiyet»). В `main` переходим только после
+Редизайн всех экранов (этапы 0–6) выполнен 30.10.2026 в ветке GitHub `redesign` (SunsetqDev/TazaNiyet; локально — `redesign-github` в папке «Документы» → TazaNiyet). В `main` переходим только после
 проверки владельцем на Android-телефоне. Веб-версия не запускается и не нужна: при серверном рендере
 `web.output: "server"` AsyncStorage Supabase падает с `window is not defined`.
 Проверка сборки без телефона: `npx expo export --platform android --no-bytecode --output-dir dist` (потом удалить `dist`).
