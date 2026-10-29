@@ -1,0 +1,21 @@
+/** Строка таблицы universities. */
+export type Uni = {
+  id: number;
+  name: string;
+  city: string;
+  type: string;
+  website: string | null;
+  description: string | null;
+  programs: string | null;
+  photo_url: string | null;
+  checked_at: string | null;
+};
+
+export const uniTypeLabel = (type: string) => (type === "college" ? "Колледж" : "Университет");
+
+/** programs хранится строкой через запятую. */
+export const uniPrograms = (u: Uni) =>
+  (u.programs ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
