@@ -1,19 +1,19 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppText } from "../components/ui/app-text";
+import { BackButton } from "../components/ui/back-button";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { EmptyState } from "../components/ui/empty-state";
+import { RowIcon } from "../components/ui/list-row";
+import { Screen } from "../components/ui/screen";
+import { SectionHeader } from "../components/ui/section-header";
+import { SkeletonCard } from "../components/ui/skeleton";
+import { TextField } from "../components/ui/text-field";
 import { supabase } from "../lib/supabase";
-
-const GREEN = "#1F7A4D";
+import { color, font, radius, space } from "../lib/theme";
 
 const REASONS = [
   "Фото «после» не показывает результат",
@@ -30,8 +30,25 @@ type Item = {
   afterUrl?: string;
 };
 
+function Shot({ label, uri }: { label: string; uri?: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <AppText variant="overline" style={{ marginBottom: space.x1 }}>
+        {label}
+      </AppText>
+      {uri ? (
+        <Image source={{ uri }} style={s.photo} />
+      ) : (
+        <View style={[s.photo, s.noPhoto]}>
+          <Ionicons name="image-outline" size={24} color={color.faint} />
+          <AppText variant="caption">Нет фото</AppText>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function ModeratorScreen() {
-  const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
@@ -139,152 +156,139 @@ export default function ModeratorScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.back}>← Назад</Text>
-      </Pressable>
-      <Text style={styles.title}>Проверка заданий</Text>
+    <Screen bottomInset>
+      <BackButton />
+      <AppText variant="h1">Проверка заданий</AppText>
 
-      <View style={styles.consent}>
-        <Text style={styles.consentTitle}>Согласие родителей</Text>
-        <Text style={styles.consentText}>
+      <Card style={{ marginTop: space.x5 }}>
+        <AppText variant="h3">Согласие родителей</AppText>
+        <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>
           Подтверждайте только после того, как связались с родителем или получили бумажное согласие.
-        </Text>
-        <TextInput
-          style={styles.input}
+        </AppText>
+        <TextField
           placeholder="Почта ребёнка (из регистрации)"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
-        <Pressable style={styles.consentBtn} onPress={confirmConsent} disabled={consentBusy}>
-          {consentBusy ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.yesText}>Подтвердить согласие</Text>
-          )}
-        </Pressable>
-      </View>
+        <Button label="Подтвердить согласие" variant="secondary" onPress={confirmConsent} loading={consentBusy} />
+      </Card>
 
-      <Text style={styles.sub}>Ожидают проверки: {items.length}</Text>
+      <SectionHeader title="Ожидают проверки" hint={loading ? undefined : String(items.length)} />
 
-      {loading && <ActivityIndicator color={GREEN} style={{ marginTop: 20 }} />}
-      {!loading && items.length === 0 && <Text style={styles.empty}>Все заявки проверены 🎉</Text>}
-
-      {items.map((it) => (
-        <View key={it.id} style={styles.card}>
-          <Text style={styles.cardTitle}>
-            {it.tasks?.emoji} {it.tasks?.title} (+{it.tasks?.points} TZ)
-          </Text>
-          <Text style={styles.date}>
-            Заявка №{it.id}, {new Date(it.created_at).toLocaleString("ru-RU")}
-          </Text>
-          <View style={styles.photos}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>ДО</Text>
-              {it.beforeUrl && <Image source={{ uri: it.beforeUrl }} style={styles.photo} />}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>ПОСЛЕ</Text>
-              {it.afterUrl && <Image source={{ uri: it.afterUrl }} style={styles.photo} />}
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <Pressable
-              style={[styles.btn, styles.no]}
-              disabled={busy === it.id}
-              onPress={() => {
-                setCustomReason("");
-                setRejectFor(rejectFor === it.id ? null : it.id);
-              }}
-            >
-              <Text style={styles.noText}>{rejectFor === it.id ? "Отмена" : "Отклонить"}</Text>
-            </Pressable>
-            <Pressable style={[styles.btn, styles.yes]} disabled={busy === it.id} onPress={() => review(it.id, true)}>
-              <Text style={styles.yesText}>Принять</Text>
-            </Pressable>
-          </View>
-
-          {rejectFor === it.id && (
-            <View style={styles.rejectBox}>
-              <Text style={styles.label}>ПРИЧИНА ОТКАЗА (её увидит пользователь)</Text>
-              {REASONS.map((r) => (
-                <Pressable
-                  key={r}
-                  style={styles.reasonChip}
-                  disabled={busy === it.id}
-                  onPress={() => review(it.id, false, r)}
-                >
-                  <Text style={styles.reasonChipText}>{r}</Text>
-                </Pressable>
-              ))}
-              <TextInput
-                style={styles.input}
-                placeholder="Или напишите свою причину"
-                value={customReason}
-                onChangeText={setCustomReason}
-                multiline
-              />
-              <Pressable
-                style={[styles.btn, styles.yes, !customReason.trim() && { opacity: 0.4 }]}
-                disabled={busy === it.id || !customReason.trim()}
-                onPress={() => review(it.id, false, customReason)}
-              >
-                <Text style={styles.yesText}>Отклонить с этой причиной</Text>
-              </Pressable>
-            </View>
-          )}
-
-          <Pressable style={styles.fraudBtn} disabled={busy === it.id} onPress={() => fraud(it)}>
-            <Text style={styles.fraudText}>⚠️ Обман (отклонить и снять очки)</Text>
-          </Pressable>
+      {loading && (
+        <View style={{ gap: space.x4 }}>
+          <SkeletonCard height={320} />
         </View>
-      ))}
-    </ScrollView>
+      )}
+      {!loading && items.length === 0 && <EmptyState icon="checkmark-done-outline" title="Все заявки проверены" text="Новые появятся здесь." />}
+
+      {!loading &&
+        items.map((it) => {
+          const isBusy = busy === it.id;
+          return (
+            <Card key={it.id} style={s.card}>
+              <View style={s.head}>
+                <RowIcon>
+                  <Text style={{ fontSize: 20 }}>{it.tasks?.emoji}</Text>
+                </RowIcon>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="bodyStrong">{it.tasks?.title}</AppText>
+                  <AppText variant="caption">
+                    Заявка №{it.id} · {new Date(it.created_at).toLocaleString("ru-RU")}
+                  </AppText>
+                </View>
+                <AppText style={s.pts}>+{it.tasks?.points} TZ</AppText>
+              </View>
+
+              <View style={s.photos}>
+                <Shot label="До" uri={it.beforeUrl} />
+                <Shot label="После" uri={it.afterUrl} />
+              </View>
+
+              <View style={s.row}>
+                <Button
+                  label={rejectFor === it.id ? "Отмена" : "Отклонить"}
+                  variant="secondary"
+                  disabled={isBusy}
+                  onPress={() => {
+                    setCustomReason("");
+                    setRejectFor(rejectFor === it.id ? null : it.id);
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <Button label="Принять" icon="checkmark" loading={isBusy} onPress={() => review(it.id, true)} style={{ flex: 1 }} />
+              </View>
+
+              {rejectFor === it.id && (
+                <View style={s.rejectBox}>
+                  <AppText variant="overline" style={{ marginBottom: space.x2 }}>
+                    Причина отказа — её увидит пользователь
+                  </AppText>
+                  {REASONS.map((r) => (
+                    <Pressable
+                      key={r}
+                      style={({ pressed }) => [s.reason, pressed && { opacity: 0.6 }]}
+                      disabled={isBusy}
+                      onPress={() => review(it.id, false, r)}
+                    >
+                      <AppText variant="body" style={{ flex: 1 }}>
+                        {r}
+                      </AppText>
+                      <Ionicons name="chevron-forward" size={16} color={color.faint} />
+                    </Pressable>
+                  ))}
+                  <TextField
+                    placeholder="Или напишите свою причину"
+                    value={customReason}
+                    onChangeText={setCustomReason}
+                    multiline
+                    style={{ marginTop: space.x2, minHeight: 80, textAlignVertical: "top" }}
+                  />
+                  <Button
+                    label="Отклонить с этой причиной"
+                    variant="secondary"
+                    disabled={isBusy || !customReason.trim()}
+                    onPress={() => review(it.id, false, customReason)}
+                  />
+                </View>
+              )}
+
+              <Button
+                label="Обман — отклонить и снять очки"
+                icon="warning-outline"
+                variant="danger"
+                disabled={isBusy}
+                onPress={() => fraud(it)}
+                style={{ marginTop: space.x2 }}
+              />
+            </Card>
+          );
+        })}
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F6F3EA" },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 50 },
-  back: { color: GREEN, fontSize: 16, fontWeight: "600", marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: "800", color: "#1C2B23", marginBottom: 16 },
-  consent: { backgroundColor: "#FFF6D6", borderRadius: 16, padding: 16, marginBottom: 20 },
-  consentTitle: { fontSize: 16, fontWeight: "800", color: "#8A6D00" },
-  consentText: { color: "#5B4A00", marginVertical: 8, lineHeight: 20 },
-  input: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
+const s = StyleSheet.create({
+  card: { marginBottom: space.x4 },
+  head: { flexDirection: "row", alignItems: "flex-start", gap: space.x3 },
+  pts: { fontFamily: font.bold, fontSize: 14, color: color.forest },
+  photos: { flexDirection: "row", gap: space.x3, marginTop: space.x4 },
+  photo: { width: "100%", aspectRatio: 3 / 4, borderRadius: radius.field, backgroundColor: color.sand },
+  noPhoto: { alignItems: "center", justifyContent: "center", gap: 4 },
+  row: { flexDirection: "row", gap: space.x2, marginTop: space.x4 },
+  rejectBox: { backgroundColor: color.cream, borderRadius: radius.field, padding: space.x3, marginTop: space.x3 },
+  reason: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.x2,
+    minHeight: 48,
+    backgroundColor: color.surface,
     borderWidth: 1,
-    borderColor: "#E6DDB0",
-    marginBottom: 10,
+    borderColor: color.line,
+    borderRadius: 14,
+    paddingHorizontal: space.x3,
+    marginBottom: space.x2,
   },
-  consentBtn: { backgroundColor: GREEN, borderRadius: 12, padding: 14, alignItems: "center" },
-  sub: { color: "#5B6B62", marginBottom: 12 },
-  empty: { color: "#7C8A82", marginTop: 12 },
-  card: { backgroundColor: "white", borderRadius: 16, padding: 16, marginBottom: 14 },
-  cardTitle: { fontSize: 16, fontWeight: "700", color: "#1C2B23" },
-  date: { fontSize: 12, color: "#7C8A82", marginTop: 2, marginBottom: 10 },
-  photos: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  label: { fontSize: 12, fontWeight: "700", color: "#5B6B62", marginBottom: 4 },
-  photo: { width: "100%", height: 150, borderRadius: 10, backgroundColor: "#EEE" },
-  row: { flexDirection: "row", gap: 10 },
-  btn: { flex: 1, borderRadius: 12, padding: 14, alignItems: "center" },
-  yes: { backgroundColor: GREEN },
-  yesText: { color: "white", fontWeight: "700" },
-  no: { backgroundColor: "#EEF2EF" },
-  noText: { color: "#3F4F46", fontWeight: "700" },
-  rejectBox: { backgroundColor: "#FCE8E6", borderRadius: 12, padding: 12, marginTop: 10 },
-  reasonChip: { backgroundColor: "white", borderRadius: 10, padding: 12, marginBottom: 8 },
-  reasonChipText: { color: "#1C2B23", fontWeight: "600" },
-  fraudBtn: { backgroundColor: "#FCE8E6", borderRadius: 12, padding: 12, alignItems: "center", marginTop: 10 },
-  fraudText: { color: "#B3261E", fontWeight: "700" },
 });

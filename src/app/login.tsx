@@ -1,9 +1,13 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
+import { AppText } from "../components/ui/app-text";
+import { Button } from "../components/ui/button";
+import { Screen } from "../components/ui/screen";
+import { TextField } from "../components/ui/text-field";
 import { supabase } from "../lib/supabase";
-
-const GREEN = "#1F7A4D";
+import { color, space } from "../lib/theme";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -31,62 +35,57 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.logo}>TazaNiyet</Text>
-      <Text style={styles.subtitle}>
-        {isSignUp ? "Создайте аккаунт" : "Войдите в аккаунт"}
-      </Text>
+    <Screen bottomInset contentStyle={s.content}>
+      <View style={s.mark}>
+        <Ionicons name="leaf" size={30} color={color.forest} />
+      </View>
+      <AppText variant="display" color={color.forest}>
+        TazaNiyet
+      </AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x8 }}>
+        {isSignUp ? "Создайте аккаунт и начните с первого задания" : "Войдите, чтобы продолжить"}
+      </AppText>
 
-      {isSignUp && (
-        <TextInput style={styles.input} placeholder="Имя" value={name} onChangeText={setName} />
-      )}
-      <TextInput
-        style={styles.input}
-        placeholder="Почта"
+      {isSignUp && <TextField label="Имя" placeholder="Как вас зовут" value={name} onChangeText={setName} autoComplete="name" />}
+      <TextField
+        label="Почта"
+        placeholder="name@mail.kz"
         autoCapitalize="none"
         keyboardType="email-address"
+        autoComplete="email"
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Пароль (минимум 6 символов)"
+      <TextField
+        label="Пароль"
+        placeholder="Минимум 6 символов"
         secureTextEntry
+        autoComplete={isSignUp ? "new-password" : "current-password"}
         value={password}
         onChangeText={setPassword}
+        onSubmitEditing={submit}
       />
 
-      <Pressable style={styles.button} onPress={submit} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text style={styles.buttonText}>{isSignUp ? "Зарегистрироваться" : "Войти"}</Text>
-        )}
-      </Pressable>
-
-      <Pressable onPress={() => setIsSignUp(!isSignUp)}>
-        <Text style={styles.link}>
-          {isSignUp ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
-        </Text>
-      </Pressable>
-    </View>
+      <Button label={isSignUp ? "Зарегистрироваться" : "Войти"} onPress={submit} loading={loading} style={{ marginTop: space.x2 }} />
+      <Button
+        label={isSignUp ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
+        variant="ghost"
+        onPress={() => setIsSignUp(!isSignUp)}
+        style={{ marginTop: space.x2 }}
+      />
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F6F3EA", padding: 24, justifyContent: "center" },
-  logo: { fontSize: 38, fontWeight: "800", color: GREEN },
-  subtitle: { fontSize: 16, color: "#5B6B62", marginBottom: 24, marginTop: 4 },
-  input: {
-    backgroundColor: "white",
-    borderRadius: 14,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#DDE5DF",
+const s = StyleSheet.create({
+  content: { flexGrow: 1, justifyContent: "center" },
+  mark: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: color.lime,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: space.x5,
   },
-  button: { backgroundColor: GREEN, borderRadius: 14, padding: 18, alignItems: "center", marginTop: 4 },
-  buttonText: { color: "white", fontSize: 17, fontWeight: "700" },
-  link: { color: GREEN, textAlign: "center", marginTop: 20, fontWeight: "600" },
 });
