@@ -80,14 +80,12 @@ src/
     theme.ts              # дизайн-токены C (цвета), S (отступы), R (радиусы)
     ranks.ts              # ранги и пороги очков
     haptics.ts            # обёртки над expo-haptics
-  constants/, hooks/      # остатки шаблона create-expo-app (Colors, Fonts, useTheme)
 assets/                   # иконки, сплэш
-scripts/reset-project.js  # скрипт шаблона Expo — НЕ запускать (перенесёт src/app)
 ```
 
-**Неиспользуемые файлы шаблона** (на них нет импортов из экранов): `animated-icon*.tsx`, `app-tabs*.tsx`,
-`external-link.tsx`, `hint-row.tsx`, `themed-text.tsx`, `themed-view.tsx`, `web-badge.tsx`, `ui/collapsible.tsx`,
-`hooks/*`, `constants/theme.ts`. Удалять только по согласованию с владельцем.
+Файлы стартового шаблона create-expo-app (themed-*, app-tabs*, animated-icon*, hooks/, constants/,
+global.css, scripts/reset-project.js и их картинки) удалены 30.10.2026 с согласия владельца — не восстанавливать.
+Удалять другие файлы — только по согласованию с владельцем.
 (`confetti.tsx`, `grow-tree.tsx`, `mascot.tsx`, `lib/haptics.ts` используются — через относительные импорты `./`.)
 
 ## 4. Архитектура и данные
@@ -191,7 +189,6 @@ RPC и их параметров — это сломает приложение 
 - Не менять пути и имена bucket `submissions`, таблиц, колонок, RPC без синхронного изменения бэкенда.
 - Не коммитить `.env`, ключи, `service_role`.
 - Не трогать `ios/`, `android/`; нативные настройки — через `app.json` и config-плагины.
-- Не запускать `npm run reset-project`.
 - Не менять `android.package`, `slug`, `scheme`, `extra.eas.projectId` в `app.json` — это сломает сборки и обновления.
 - Экраны должны работать на маленьких телефонах (портретная ориентация) — проверять переполнение текста.
 - Данные детей (год рождения, контакты родителей) не показывать другим пользователям и не логировать.
