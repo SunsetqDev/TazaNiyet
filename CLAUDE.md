@@ -67,17 +67,21 @@ src/
     (tabs)/universities.tsx, leaderboard.tsx, portfolio.tsx, profile.tsx
     login.tsx, safety.tsx, place.tsx, privacy.tsx
     task.tsx, my.tsx, edit-profile.tsx, settings.tsx, moderator.tsx
+    university/[id].tsx   # подробности о вузе (по id из таблицы universities)
     tasks.txt             # пустой файл (назначение неизвестно — не удалять без согласования)
   components/             # переиспользуемые компоненты
     anim.tsx              # PressScale, PulseEmoji, CountUp
     avatar.tsx            # Avatar + AVATAR_EMOJIS / AVATAR_COLORS
-    pet-card.tsx, mascot.tsx, living-tree.tsx (+ grow-tree.tsx), celebration.tsx (+ confetti.tsx)
-    ui/                   # базовые компоненты новой дизайн-системы (редизайн, этап 0):
-                          #   app-text, screen, button, card, chip, list-row, section-header,
-                          #   empty-state (EmptyState / ErrorState), skeleton, status-pill
+    pet-card.tsx          # hero-карточка главной: ранг, очки, баобаб + Барс, прогресс, статистика
+    mascot.tsx, living-tree.tsx (+ grow-tree.tsx), celebration.tsx (+ confetti.tsx)
+    ui/                   # базовые компоненты дизайн-системы:
+                          #   screen, app-text, button, card, chip, list-row (ListRow, RowIcon),
+                          #   section-header, text-field, back-button, empty-state (EmptyState / ErrorState),
+                          #   skeleton (Skeleton, SkeletonCard), status-pill
   lib/
     supabase.ts           # единственный клиент Supabase
-    theme.ts              # дизайн-токены C (цвета), S (отступы), R (радиусы)
+    theme.ts              # дизайн-токены: color, categoryTint, space, radius, font, type
+    universities.ts       # тип Uni и разбор направлений
     ranks.ts              # ранги и пороги очков
     haptics.ts            # обёртки над expo-haptics
 assets/                   # иконки, сплэш
@@ -115,46 +119,32 @@ RPC и их параметров — это сломает приложение 
 
 ## 5. Дизайн
 
-### Редизайн «Тихий лес» (идёт поэтапно в ветке `redesign/demo`)
+### Дизайн-система «Тихий лес»
 
-Весь редизайн делается в ветке `redesign/demo`; в `main` переходим только после проверки владельцем на телефоне.
-Готово: этап 0, этап 1 (таб-бар, главная, `PetCard` стала тёмной hero-карточкой с баобабом, Барсом и статистикой).
-Веб-версия не запускается (и не нужна — приложение только для Android): при серверном рендере
-`web.output: "server"` AsyncStorage Supabase падает с `window is not defined`. Проверять только на Android-телефоне.
+Редизайн всех экранов (этапы 0–6) выполнен 30.10.2026 в ветке `redesign/demo`. В `main` переходим только после
+проверки владельцем на Android-телефоне. Веб-версия не запускается и не нужна: при серверном рендере
+`web.output: "server"` AsyncStorage Supabase падает с `window is not defined`.
 Проверка сборки без телефона: `npx expo export --platform android --no-bytecode --output-dir dist` (потом удалить `dist`).
 
-Утверждённое направление: премиальный журнальный минимализм. Этапы: 0 фундамент → 1 таб-бар и главная →
-2 `task` + `my` → 3 профиль, `edit-profile`, `settings`, `privacy` → 4 рейтинг и портфолио → 5 вузы
-(+ экран подробностей) → 6 вход, безопасность, место, модерация, праздник, удаление старых токенов.
-После каждого этапа — коммит, `tsc`, проверка владельцем на телефоне. Следующий этап — только с разрешения.
-
-- **Токены** — в `src/lib/theme.ts` после старых `C/S/R`: `color`, `categoryTint`, `space`, `radius`, `font`, `type`.
-  Переведённые экраны используют только их; старые `C/S/R` удаляются на этапе 6.
-- **Палитра**: forest `#153D2C` (главная карточка, основная кнопка), moss `#1F4E39`, lime `#C9F36A`
+- **Токены** — `src/lib/theme.ts`: `color`, `categoryTint`, `space`, `radius`, `font`, `type`. Цвета и размеры
+  в экранах — только через них (исключение — собственные цвета рисунков Барса и баобаба).
+- **Палитра**: forest `#153D2C` (hero-карточка, основная кнопка), moss `#1F4E39`, lime `#C9F36A`
   (только заливка или текст на forest — **никогда не текст на светлом фоне**, нечитаемо), cream `#F6F4EC` (фон),
-  surface `#FFFFFF`, sand `#E9E5D6`, ink `#252A27`, muted `#6E746E`, line `#E3E0D3`.
+  surface `#FFFFFF`, sand `#E9E5D6`, ink `#252A27`, muted `#6E746E`, line `#E3E0D3`; статусы warn / danger.
 - **Шрифты**: Literata (заголовки) + Inter (интерфейс) — проверено, что есть все казахские буквы
   (Manrope и Fraunces НЕ подходят). Загрузка — `useFonts` в `src/app/_layout.tsx`, импорт **по одному начертанию**
-  (`@expo-google-fonts/inter/400Regular`), иначе в сборку попадают все ~34 файла. Не сочетать `fontFamily` с `fontWeight`
-  — использовать нужное начертание через `font.*` / `type.*`.
-- **Компоненты** `src/components/ui/*`: экран всегда оборачивать в `Screen` (безопасные области, клавиатура;
-  `bottomInset` — для Stack-экранов без таб-бара), текст — `AppText variant`, иконки — Ionicons, эмодзи — только из данных
-  (эмодзи задания, аватар). Карточки без теней, одна hero-карточка на экран, одна primary-кнопка на экран.
-- **Анимации**: появление только при первой загрузке (≤ 5 элементов, 250–350 мс), учитывать `useReducedMotion`.
-
-### Текущий (старый) дизайн
-
-- Тёплая эко-палитра из `src/lib/theme.ts`: шалфей (`C.sage #97A97C`, `C.sageDark`), фон `C.bg #FAF8F3`,
-  белые карточки, песочный `C.sand`. Отступы `S`, радиусы `R` (карточки 24, чипы — полностью круглые).
-- Мягкие крупные карточки, эмодзи как иконки, жирные заголовки (700–800), анимации появления
-  `FadeInDown.springify()`, нажатие с уменьшением (`PressScale`), счётчики `CountUp`, тактильный отклик.
-- Нижняя панель вкладок — Ionicons (outline / filled при фокусе), активный цвет `C.sageDark`.
-- Только светлая тема; верхний отступ экранов задан вручную (`paddingTop: 60–70`).
-- **Несоответствие**: `login`, `task`, `safety`, `place`, `settings`, `privacy`, `moderator`, `portfolio` используют старый стиль
-  (`const GREEN = "#1F7A4D"`, фон `#F6F3EA`) вместо токенов `C`. Новый код пиши на токенах `C/S/R`;
-  переводить старые экраны на новую палитру — отдельной задачей, по согласованию.
-- `leaderboard.tsx` дублирует пороги рангов и свой `Avatar` — при правках рангов обновлять оба места
-  (или вынести на `lib/ranks.ts`).
+  (`@expo-google-fonts/inter/400Regular`), иначе в сборку попадают все ~34 файла. Не использовать `fontWeight` —
+  нужное начертание через `font.*` / `type.*`.
+- **Компоненты** `src/components/ui/*`: экран всегда в `Screen` (безопасные области, клавиатура; `bottomInset` —
+  для Stack-экранов без таб-бара; `footer` — закреплённая кнопка), текст — `AppText variant`, поля — `TextField`,
+  «назад» — `BackButton`, загрузка — `Skeleton`, пусто/ошибка — `EmptyState` / `ErrorState` (сырой текст ошибки
+  загрузки не показывать). Иконки — Ionicons; эмодзи — только из данных (эмодзи задания, аватар, значки, ранги).
+  Карточки без теней, одна hero-карточка на экран. `RefreshControl` — с `colors={[color.forest]}` (Android).
+- **Анимации**: появление только при первом показе (≤ 5 шагов, 250–350 мс); `Skeleton` учитывает `useReducedMotion`.
+- **Не сделано (нужны решения владельца)**: избранные вузы (где хранить), периоды рейтинга и профиль участника
+  (нужны изменения RPC `get_leaderboard`), мероприятия / «Жасыл Ел» / часы / сертификаты (нет данных),
+  разное определение серии дней на главной (принятые + на проверке) и в профиле (только принятые),
+  экран «Где вы живёте?» не подставляет текущие значения при смене места.
 
 ## 6. Требования владельца к изменениям
 
