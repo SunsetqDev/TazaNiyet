@@ -66,7 +66,10 @@ src/
   components/             # переиспользуемые компоненты
     anim.tsx              # PressScale, PulseEmoji, CountUp
     avatar.tsx            # Avatar + AVATAR_EMOJIS / AVATAR_COLORS
-    pet-card.tsx, mascot.tsx, living-tree.tsx, celebration.tsx
+    pet-card.tsx, mascot.tsx, living-tree.tsx (+ grow-tree.tsx), celebration.tsx (+ confetti.tsx)
+    ui/                   # базовые компоненты новой дизайн-системы (редизайн, этап 0):
+                          #   app-text, screen, button, card, chip, list-row, section-header,
+                          #   empty-state (EmptyState / ErrorState), skeleton, status-pill
   lib/
     supabase.ts           # единственный клиент Supabase
     theme.ts              # дизайн-токены C (цвета), S (отступы), R (радиусы)
@@ -79,7 +82,8 @@ scripts/reset-project.js  # скрипт шаблона Expo — НЕ запус
 
 **Неиспользуемые файлы шаблона** (на них нет импортов из экранов): `animated-icon*.tsx`, `app-tabs*.tsx`,
 `external-link.tsx`, `hint-row.tsx`, `themed-text.tsx`, `themed-view.tsx`, `web-badge.tsx`, `ui/collapsible.tsx`,
-`confetti.tsx`, `grow-tree.tsx`, `hooks/*`, `constants/theme.ts`. Удалять только по согласованию с владельцем.
+`hooks/*`, `constants/theme.ts`. Удалять только по согласованию с владельцем.
+(`confetti.tsx`, `grow-tree.tsx`, `mascot.tsx`, `lib/haptics.ts` используются — через относительные импорты `./`.)
 
 ## 4. Архитектура и данные
 
@@ -107,6 +111,29 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
 RPC и их параметров — это сломает приложение у всех пользователей. Изменения схемы БД — только с явного согласия.
 
 ## 5. Дизайн
+
+### Редизайн «Тихий лес» (идёт поэтапно, ветка `redesign/*`)
+
+Утверждённое направление: премиальный журнальный минимализм. Этапы: 0 фундамент → 1 таб-бар и главная →
+2 `task` + `my` → 3 профиль, `edit-profile`, `settings`, `privacy` → 4 рейтинг и портфолио → 5 вузы
+(+ экран подробностей) → 6 вход, безопасность, место, модерация, праздник, удаление старых токенов.
+После каждого этапа — коммит, `tsc`, проверка владельцем на телефоне. Следующий этап — только с разрешения.
+
+- **Токены** — в `src/lib/theme.ts` после старых `C/S/R`: `color`, `categoryTint`, `space`, `radius`, `font`, `type`.
+  Переведённые экраны используют только их; старые `C/S/R` удаляются на этапе 6.
+- **Палитра**: forest `#153D2C` (главная карточка, основная кнопка), moss `#1F4E39`, lime `#C9F36A`
+  (только заливка или текст на forest — **никогда не текст на светлом фоне**, нечитаемо), cream `#F6F4EC` (фон),
+  surface `#FFFFFF`, sand `#E9E5D6`, ink `#252A27`, muted `#6E746E`, line `#E3E0D3`.
+- **Шрифты**: Literata (заголовки) + Inter (интерфейс) — проверено, что есть все казахские буквы
+  (Manrope и Fraunces НЕ подходят). Загрузка — `useFonts` в `src/app/_layout.tsx`, импорт **по одному начертанию**
+  (`@expo-google-fonts/inter/400Regular`), иначе в сборку попадают все ~34 файла. Не сочетать `fontFamily` с `fontWeight`
+  — использовать нужное начертание через `font.*` / `type.*`.
+- **Компоненты** `src/components/ui/*`: экран всегда оборачивать в `Screen` (безопасные области, клавиатура;
+  `bottomInset` — для Stack-экранов без таб-бара), текст — `AppText variant`, иконки — Ionicons, эмодзи — только из данных
+  (эмодзи задания, аватар). Карточки без теней, одна hero-карточка на экран, одна primary-кнопка на экран.
+- **Анимации**: появление только при первой загрузке (≤ 5 элементов, 250–350 мс), учитывать `useReducedMotion`.
+
+### Текущий (старый) дизайн
 
 - Тёплая эко-палитра из `src/lib/theme.ts`: шалфей (`C.sage #97A97C`, `C.sageDark`), фон `C.bg #FAF8F3`,
   белые карточки, песочный `C.sand`. Отступы `S`, радиусы `R` (карточки 24, чипы — полностью круглые).
