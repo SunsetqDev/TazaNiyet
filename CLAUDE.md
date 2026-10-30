@@ -179,6 +179,11 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
   (`microphonePermission: false`). «Построить маршрут» — ссылка в приложение карт телефона, ключ не нужен.
 - **EAS**: переменные `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_KEY` заданы в EAS для preview и production
   (без них APK падал при запуске — `.env` в сборку не попадает).
+- **Обновления «по воздуху» (EAS Update)** — `expo-updates`, `updates.url` в app.json, каналы в eas.json:
+  development / preview / production. `android.runtimeVersion: { policy: "fingerprint" }` — Expo сам решает,
+  совместимо ли обновление с установленным APK. Изменения только в JS/экранах → `npx eas-cli update --channel preview
+  --environment preview --message "…"`; новые нативные библиотеки / разрешения / иконка → новый APK
+  (`npx eas-cli build -p android --profile preview`). APK подписывается ключом EAS — ставится поверх старого.
 
 Безопасность держится на RLS и RPC в Supabase. При изменении запросов не ломать имена таблиц, колонок,
 RPC и их параметров — это сломает приложение у всех пользователей. Изменения схемы БД — только с явного согласия.

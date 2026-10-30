@@ -18,7 +18,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.sunsetq.TazaNiyet2"
+      "package": "com.sunsetq.TazaNiyet2",
+      "runtimeVersion": {
+        "policy": "fingerprint"
+      }
     },
     "web": {
       "output": "server",
@@ -64,6 +67,9 @@
       "eas": {
         "projectId": "701ffb98-93c3-4607-b5d1-503c77378345"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/701ffb98-93c3-4607-b5d1-503c77378345"
     }
   }
 }
