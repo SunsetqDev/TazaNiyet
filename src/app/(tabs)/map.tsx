@@ -3,14 +3,14 @@ import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StyleSheet, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PressScale } from "../../components/anim";
+import { OsmMap, type MapMarker, type OsmMapHandle } from "../../components/osm-map";
 import { AppText } from "../../components/ui/app-text";
 import { Button } from "../../components/ui/button";
 import { Chip } from "../../components/ui/chip";
-import { getCurrentCoords, KZ_REGION, REPORT_CATEGORIES, reportCategory } from "../../lib/reports";
+import { getCurrentCoords, KZ_CENTER, KZ_ZOOM, REPORT_CATEGORIES, reportCategory } from "../../lib/reports";
 import { DIFFICULTY, distanceM, formatDistance, openRoute, type MapTask } from "../../lib/spot-tasks";
 import { supabase } from "../../lib/supabase";
 import { color, font, radius, space } from "../../lib/theme";
@@ -18,24 +18,12 @@ import { color, font, radius, space } from "../../lib/theme";
 type Me = { lat: number; lng: number } | null;
 
 // маркер: свободное — тёмно-зелёное, моё — лаймовое, занятое другим — серое
-function Pin({ t }: { t: MapTask }) {
-  const busy = t.status !== "available" && !t.is_mine;
-  const bg = t.is_mine ? color.lime : busy ? color.faint : color.forest;
-  const fg = t.is_mine ? color.forest : color.onForest;
-  return (
-    <View style={s.pinWrap}>
-      <View style={[s.pin, { backgroundColor: bg }]}>
-        <Ionicons name={reportCategory(t.category).icon} size={18} color={fg} />
-      </View>
-      <View style={[s.pinTail, { borderTopColor: bg }]} />
-    </View>
-  );
-}
+const pinKind = (t: MapTask): MapMarker["kind"] => (t.is_mine ? "mine" : t.status !== "available" ? "busy" : "available");
 
 export default function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const map = useRef<MapView>(null);
+  const map = useRef<OsmMapHandle>(null);
   const [tasks, setTasks] = useState<MapTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -44,7 +32,6 @@ export default function MapScreen() {
   const [locAllowed, setLocAllowed] = useState<boolean | null>(null);
   const [selected, setSelected] = useState<MapTask | null>(null);
   const [thumb, setThumb] = useState<string | null>(null);
-  const [pinsReady, setPinsReady] = useState(false);
   const centered = useRef(false);
 
   const load = useCallback(async () => {
@@ -80,15 +67,8 @@ export default function MapScreen() {
     const target = me ?? (tasks[0] ? { lat: tasks[0].lat, lng: tasks[0].lng } : null);
     if (!target) return;
     centered.current = true;
-    map.current?.animateToRegion({ latitude: target.lat, longitude: target.lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }, 500);
+    map.current?.flyTo(target, 13);
   }, [me, tasks, loading]);
-
-  // кастомные маркеры на Android перерисовываются постоянно, пока tracksViewChanges = true — отключаем после первой отрисовки
-  useEffect(() => {
-    setPinsReady(false);
-    const id = setTimeout(() => setPinsReady(true), 600);
-    return () => clearTimeout(id);
-  }, [tasks, cat]);
 
   useEffect(() => {
     setThumb(null);
@@ -105,42 +85,30 @@ export default function MapScreen() {
 
   const shown = useMemo(() => tasks.filter((t) => cat === "all" || t.category === cat), [tasks, cat]);
   const available = tasks.filter((t) => t.status === "available").length;
+  const markers = useMemo<MapMarker[]>(() => shown.map((t) => ({ id: t.id, lat: t.lat, lng: t.lng, kind: pinKind(t) })), [shown]);
 
   const locate = async () => {
     const p = me ?? (await findMe(true));
     const c = p ?? (await getCurrentCoords());
-    if (c) map.current?.animateToRegion({ latitude: c.lat, longitude: c.lng, latitudeDelta: 0.02, longitudeDelta: 0.02 }, 400);
+    if (c) map.current?.flyTo({ lat: c.lat, lng: c.lng }, 15);
   };
 
   const dist = selected && me ? distanceM(me.lat, me.lng, selected.lat, selected.lng) : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: color.cream }}>
-      <MapView
+      <OsmMap
         ref={map}
         style={StyleSheet.absoluteFill}
-        initialRegion={KZ_REGION}
-        showsUserLocation={!!locAllowed}
-        showsMyLocationButton={false}
-        toolbarEnabled={false}
+        center={KZ_CENTER}
+        zoom={KZ_ZOOM}
+        me={locAllowed ? me : null}
+        markers={markers}
+        selectedId={selected?.id ?? null}
+        padding={{ top: insets.top + 110, bottom: selected ? 230 : 0 }}
         onPress={() => setSelected(null)}
-        mapPadding={{ top: insets.top + 110, right: 0, bottom: selected ? 230 : 0, left: 0 }}
-      >
-        {shown.map((t) => (
-          <Marker
-            key={t.id}
-            coordinate={{ latitude: t.lat, longitude: t.lng }}
-            onPress={(e) => {
-              e.stopPropagation();
-              setSelected(t);
-            }}
-            tracksViewChanges={!pinsReady}
-            anchor={{ x: 0.5, y: 1 }}
-          >
-            <Pin t={t} />
-          </Marker>
-        ))}
-      </MapView>
+        onMarkerPress={(id) => setSelected(shown.find((t) => String(t.id) === id) ?? null)}
+      />
 
       {/* шапка с фильтрами */}
       <View style={[s.top, { paddingTop: insets.top + space.x2 }]} pointerEvents="box-none">
@@ -320,24 +288,4 @@ const s = StyleSheet.create({
   ptsPill: { alignSelf: "flex-start", backgroundColor: color.forest, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
   ptsText: { fontFamily: font.bold, fontSize: 12, color: color.lime },
   actions: { flexDirection: "row", gap: space.x2, marginTop: space.x3 },
-  pinWrap: { alignItems: "center" },
-  pin: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: color.surface,
-  },
-  pinTail: {
-    width: 0,
-    height: 0,
-    marginTop: -1,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-  },
 });

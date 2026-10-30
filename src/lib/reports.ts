@@ -18,8 +18,9 @@ export const reportCategory = (k: string) => REPORT_CATEGORIES.find((c) => c.k =
 
 export type Coords = { lat: number; lng: number; accuracy: number | null };
 
-/** Центр Казахстана — карта по умолчанию, если GPS недоступен. */
-export const KZ_REGION = { latitude: 48.0, longitude: 67.0, latitudeDelta: 18, longitudeDelta: 18 };
+/** Центр Казахстана и масштаб — карта по умолчанию, если GPS недоступен. */
+export const KZ_CENTER = { lat: 48.0, lng: 67.0 };
+export const KZ_ZOOM = 4;
 
 /** Текущие координаты с проверкой разрешения и включённого GPS. null — пользователю уже объяснили причину. */
 export async function getCurrentCoords(): Promise<Coords | null> {

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
+import { OsmMap } from "../osm-map";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import { reportCategory } from "../../lib/reports";
 import { DIFFICULTY } from "../../lib/spot-tasks";
 import { supabase } from "../../lib/supabase";
@@ -105,13 +105,13 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
       </AppText>
 
       <View style={s.map}>
-        <MapView
+        <OsmMap
           style={StyleSheet.absoluteFill}
-          liteMode
-          initialRegion={{ latitude: r.lat, longitude: r.lng, latitudeDelta: 0.005, longitudeDelta: 0.005 }}
-        >
-          <Marker coordinate={{ latitude: r.lat, longitude: r.lng }} pinColor={color.forest} />
-        </MapView>
+          center={r}
+          zoom={16}
+          interactive={false}
+          markers={[{ id: "point", lat: r.lat, lng: r.lng, kind: "point" }]}
+        />
       </View>
       <AppText variant="caption">
         {[r.address, r.place_name ?? r.region].filter(Boolean).join(" · ")}

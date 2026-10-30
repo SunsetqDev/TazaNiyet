@@ -78,6 +78,7 @@ src/
   components/             # переиспользуемые компоненты
     anim.tsx              # PressScale, PulseEmoji, CountUp
     avatar.tsx            # Avatar + AVATAR_EMOJIS / AVATAR_COLORS
+    osm-map.tsx           # карта OpenStreetMap (WebView + MapLibre), см. раздел «Карта»
     pet-card.tsx          # hero-карточка главной: ранг, очки, баобаб + Барс, прогресс, статистика
     mascot.tsx, living-tree.tsx (+ grow-tree.tsx), celebration.tsx (+ confetti.tsx)
     ui/                   # базовые компоненты дизайн-системы:
@@ -165,10 +166,19 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
   (Вузы и Портфолио — обычные экраны, вход из профиля, группа «Поступление»); очки: +10 TZ автору подтверждённой
   заявки, уборка 30 / 60 / 100 TZ по сложности (модератор может изменить); фото результата отправляется только
   в радиусе ~200 м от точки; задание закрепляется за исполнителем на 48 ч; своё задание брать нельзя.
-- **Карта** — `react-native-maps` (Google Maps на Android; в Expo Go без ключа). Для APK нужен ключ Google Maps,
-  ограниченный пакетом приложения, через плагин `react-native-maps` → `androidGoogleMapsApiKey` из переменной
-  окружения, не в коде. GPS — `expo-location` (только foreground). В `app.json` тексты разрешений;
-  микрофон у image-picker отключён (`microphonePermission: false`).
+- **Карта** — OpenStreetMap: `src/components/osm-map.tsx` (`OsmMap`) — MapLibre GL JS 4.7.1 (unpkg) в `react-native-webview`,
+  стиль OpenFreeMap `https://tiles.openfreemap.org/styles/liberty`. Без ключей и банковских карт, одинаково в Expo Go
+  и APK; нужен интернет; подпись © OpenStreetMap обязательна. API: `center`, `zoom`, `markers` (kind: available /
+  mine / busy / point), `selectedId`, `me`, `draggable`, `interactive`, `padding`, `onPress`, `onMarkerPress`,
+  `onMarkerDrag`, ref `flyTo(point, zoom)`. HTML строится один раз, изменения уходят через `window.__set`.
+  Google Maps (`react-native-maps`) убран 30.10.2026: ключ Google Cloud получить не удалось (не прошла карта).
+  Типы `react-native-webview` дают `never` в TS 6 — используется алиас `MapWebView` с явными `WebViewProps`.
+  Проверено в Chromium: отрисовка, маркеры, нажатия, перетаскивание, flyTo (скриншоты WebGL-холста пустые — это
+  особенность инструмента скриншотов, не ошибка).
+- **GPS** — `expo-location` (только foreground). В `app.json` тексты разрешений; микрофон у image-picker отключён
+  (`microphonePermission: false`). «Построить маршрут» — ссылка в приложение карт телефона, ключ не нужен.
+- **EAS**: переменные `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_KEY` заданы в EAS для preview и production
+  (без них APK падал при запуске — `.env` в сборку не попадает).
 
 Безопасность держится на RLS и RPC в Supabase. При изменении запросов не ломать имена таблиц, колонок,
 RPC и их параметров — это сломает приложение у всех пользователей. Изменения схемы БД — только с явного согласия.

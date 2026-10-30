@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
-import MapView, { Marker, type MapPressEvent, type MarkerDragStartEndEvent } from "react-native-maps";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { PressScale } from "../components/anim";
+import { OsmMap, type OsmMapHandle } from "../components/osm-map";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
 import { Button } from "../components/ui/button";
@@ -12,7 +12,7 @@ import { Screen } from "../components/ui/screen";
 import { SectionHeader } from "../components/ui/section-header";
 import { TextField } from "../components/ui/text-field";
 import { pickPhoto, takePhoto, uploadPhoto, type Photo } from "../lib/photos";
-import { addressFor, getCurrentCoords, inKazakhstan, KZ_REGION, REPORT_CATEGORIES, type Coords } from "../lib/reports";
+import { addressFor, getCurrentCoords, inKazakhstan, KZ_CENTER, KZ_ZOOM, REPORT_CATEGORIES, type Coords } from "../lib/reports";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
 
@@ -20,7 +20,7 @@ const MAX_PHOTOS = 3;
 
 export default function ReportScreen() {
   const router = useRouter();
-  const map = useRef<MapView>(null);
+  const map = useRef<OsmMapHandle>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [category, setCategory] = useState<string | null>(null);
   const [description, setDescription] = useState("");
@@ -61,15 +61,13 @@ export default function ReportScreen() {
     }
     setCoords(c);
     setManual(false);
-    map.current?.animateToRegion({ latitude: c.lat, longitude: c.lng, latitudeDelta: 0.004, longitudeDelta: 0.004 }, 400);
+    map.current?.flyTo({ lat: c.lat, lng: c.lng }, 17);
   };
 
   const moveTo = (lat: number, lng: number) => {
     if (!inKazakhstan(lat, lng)) return;
     setCoords({ lat, lng, accuracy: null });
   };
-  const onMapPress = (e: MapPressEvent) => moveTo(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude);
-  const onDragEnd = (e: MarkerDragStartEndEvent) => moveTo(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude);
 
   const desc = description.trim();
   const missing =
@@ -229,27 +227,16 @@ export default function ReportScreen() {
         </View>
       ) : (
         <>
-          <View style={s.mapBox}>
-            <MapView
-              ref={map}
-              style={StyleSheet.absoluteFill}
-              initialRegion={
-                coords ? { latitude: coords.lat, longitude: coords.lng, latitudeDelta: 0.004, longitudeDelta: 0.004 } : KZ_REGION
-              }
-              onPress={onMapPress}
-              showsUserLocation={!manual}
-              toolbarEnabled={false}
-            >
-              {coords && (
-                <Marker
-                  coordinate={{ latitude: coords.lat, longitude: coords.lng }}
-                  draggable
-                  onDragEnd={onDragEnd}
-                  pinColor={color.forest}
-                />
-              )}
-            </MapView>
-          </View>
+          <OsmMap
+            ref={map}
+            style={s.mapBox}
+            center={coords ?? KZ_CENTER}
+            zoom={coords ? 17 : KZ_ZOOM}
+            markers={coords ? [{ id: "point", lat: coords.lat, lng: coords.lng, kind: "point" }] : []}
+            draggable
+            onPress={(p) => moveTo(p.lat, p.lng)}
+            onMarkerDrag={(p) => moveTo(p.lat, p.lng)}
+          />
           <View style={s.locInfo}>
             <Ionicons name="location" size={16} color={color.forest} />
             <AppText variant="body" style={{ flex: 1 }}>

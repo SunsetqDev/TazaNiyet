@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
+import { OsmMap } from "../../components/osm-map";
 import { Alert, Image, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import { AppText } from "../../components/ui/app-text";
 import { BackButton } from "../../components/ui/back-button";
 import { Button } from "../../components/ui/button";
@@ -272,14 +272,14 @@ export default function SpotTaskScreen() {
 
       <SectionHeader title="Где это" />
       <View style={s.map}>
-        <MapView
+        <OsmMap
           style={StyleSheet.absoluteFill}
-          liteMode
-          initialRegion={{ latitude: t.lat, longitude: t.lng, latitudeDelta: 0.006, longitudeDelta: 0.006 }}
+          center={t}
+          zoom={16}
+          interactive={false}
+          markers={[{ id: "point", lat: t.lat, lng: t.lng, kind: "point" }]}
           onPress={() => openRoute(t.lat, t.lng)}
-        >
-          <Marker coordinate={{ latitude: t.lat, longitude: t.lng }} pinColor={color.forest} />
-        </MapView>
+        />
       </View>
       <View style={s.addr}>
         <Ionicons name="location-outline" size={16} color={color.muted} />
