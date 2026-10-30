@@ -3,18 +3,18 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Share, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
-import { AppText } from "../../components/ui/app-text";
-import { BackButton } from "../../components/ui/back-button";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { EmptyState } from "../../components/ui/empty-state";
-import { ListRow, RowIcon } from "../../components/ui/list-row";
-import { Screen } from "../../components/ui/screen";
-import { SectionHeader } from "../../components/ui/section-header";
-import { SkeletonCard } from "../../components/ui/skeleton";
-import { TextField } from "../../components/ui/text-field";
-import { supabase } from "../../lib/supabase";
-import { color, font, radius, space } from "../../lib/theme";
+import { AppText } from "../components/ui/app-text";
+import { BackButton } from "../components/ui/back-button";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { EmptyState } from "../components/ui/empty-state";
+import { ListRow, RowIcon } from "../components/ui/list-row";
+import { Screen } from "../components/ui/screen";
+import { SectionHeader } from "../components/ui/section-header";
+import { SkeletonCard } from "../components/ui/skeleton";
+import { TextField } from "../components/ui/text-field";
+import { supabase } from "../lib/supabase";
+import { color, font, radius, space } from "../lib/theme";
 
 type TaskRow = { title: string; emoji: string; points: number; date: string };
 type Result = { name: string; place: string | null; points: number; tasks: TaskRow[] };
@@ -146,7 +146,7 @@ export default function PortfolioScreen() {
   };
 
   return (
-    <Screen>
+    <Screen bottomInset>
       <BackButton />
       <AppText variant="h1">Портфолио</AppText>
       <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>

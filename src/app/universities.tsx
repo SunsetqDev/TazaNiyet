@@ -2,16 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { PressScale } from "../../components/anim";
-import { AppText } from "../../components/ui/app-text";
-import { BackButton } from "../../components/ui/back-button";
-import { Chip } from "../../components/ui/chip";
-import { EmptyState, ErrorState } from "../../components/ui/empty-state";
-import { Screen } from "../../components/ui/screen";
-import { SkeletonCard } from "../../components/ui/skeleton";
-import { supabase } from "../../lib/supabase";
-import { color, font, radius, space } from "../../lib/theme";
-import { uniPrograms, uniTypeLabel, type Uni } from "../../lib/universities";
+import { PressScale } from "../components/anim";
+import { AppText } from "../components/ui/app-text";
+import { BackButton } from "../components/ui/back-button";
+import { Chip } from "../components/ui/chip";
+import { EmptyState, ErrorState } from "../components/ui/empty-state";
+import { Screen } from "../components/ui/screen";
+import { SkeletonCard } from "../components/ui/skeleton";
+import { supabase } from "../lib/supabase";
+import { color, font, radius, space } from "../lib/theme";
+import { uniPrograms, uniTypeLabel, type Uni } from "../lib/universities";
 
 function UniCard({ u, onPress }: { u: Uni; onPress: () => void }) {
   const programs = uniPrograms(u);
@@ -91,7 +91,7 @@ export default function UniversitiesScreen() {
   };
 
   return (
-    <Screen>
+    <Screen bottomInset>
       <BackButton />
       <AppText variant="h1">Вузы и колледжи</AppText>
       <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>

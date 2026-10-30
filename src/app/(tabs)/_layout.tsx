@@ -61,8 +61,9 @@ const tab = (title: string, icon: IconName, iconOn: IconName) => ({
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   return (
+    // Вузы и Портфолио — обычные экраны (src/app/universities.tsx, portfolio.tsx), а не скрытые вкладки:
+    // в Expo Router 58 вкладка с href: null перенаправляет на первую вкладку, и открыть её нельзя
     <Tabs
-      // «назад» из Вузов и Портфолио возвращает туда, откуда их открыли (профиль, главная)
       backBehavior="history"
       screenOptions={{
         headerShown: false,
@@ -88,9 +89,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="new" options={{ title: "Сообщить", tabBarButton: () => <ReportButton /> }} />
       <Tabs.Screen name="leaderboard" options={tab("Рейтинг", "trophy-outline", "trophy")} />
       <Tabs.Screen name="profile" options={tab("Профиль", "person-outline", "person")} />
-      {/* Вузы и Портфолио — не в панели, вход из профиля и с главной */}
-      <Tabs.Screen name="universities" options={{ href: null }} />
-      <Tabs.Screen name="portfolio" options={{ href: null }} />
     </Tabs>
   );
 }

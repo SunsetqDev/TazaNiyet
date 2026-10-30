@@ -63,10 +63,11 @@ src/
   app/                    # ТОЛЬКО экраны (каждый файл = маршрут)
     _layout.tsx           # корневой Stack, заголовки скрыты
     (tabs)/_layout.tsx    # вкладки: Задания · Карта · ➕ (new.tsx → /report) · Рейтинг · Профиль;
-                          #   universities и portfolio скрыты из панели (href: null), вход из профиля; backBehavior="history"
+                          #   НЕ скрывать вкладки через href: null — в Expo Router 58 такая вкладка перенаправляет на главную
     (tabs)/index.tsx      # главная: задания, питомец, «Рядом с вами», статистика, проверка онбординга
     (tabs)/map.tsx        # карта заданий: маркеры, фильтр, «где я», карточка задания
-    (tabs)/universities.tsx, leaderboard.tsx, portfolio.tsx, profile.tsx
+    (tabs)/leaderboard.tsx, profile.tsx
+    universities.tsx, portfolio.tsx  # обычные экраны Stack, вход из Профиля → «Поступление»
     login.tsx, safety.tsx, place.tsx, privacy.tsx
     task.tsx, my.tsx, edit-profile.tsx, settings.tsx, moderator.tsx
     report.tsx            # «Сообщить о загрязнении»: фото (камера/галерея), категория, описание, GPS + карта
@@ -161,7 +162,7 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
   `geo_distance_m(...)` — расстояние в метрах (PostGIS не подключён).
 - **Бакет `reports`** — закрытый: загрузка в `<uid>/…`, чтение своих, модераторы читают все.
 - **Решения владельца:** название остаётся TazaNiyet; навигация «Задания · Карта · ➕ Сообщить · Рейтинг · Профиль»
-  (Вузы и Портфолио — скрытые вкладки, вход из профиля, группа «Поступление»); очки: +10 TZ автору подтверждённой
+  (Вузы и Портфолио — обычные экраны, вход из профиля, группа «Поступление»); очки: +10 TZ автору подтверждённой
   заявки, уборка 30 / 60 / 100 TZ по сложности (модератор может изменить); фото результата отправляется только
   в радиусе ~200 м от точки; задание закрепляется за исполнителем на 48 ч; своё задание брать нельзя.
 - **Карта** — `react-native-maps` (Google Maps на Android; в Expo Go без ключа). Для APK нужен ключ Google Maps,
