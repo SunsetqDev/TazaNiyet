@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -18,6 +19,8 @@ import { Screen } from "../../components/ui/screen";
 import { SectionHeader } from "../../components/ui/section-header";
 import { Skeleton, SkeletonCard } from "../../components/ui/skeleton";
 import { getRank, getRankIndex } from "../../lib/ranks";
+import { reportCategory } from "../../lib/reports";
+import { distanceM, formatDistance, type MapTask } from "../../lib/spot-tasks";
 import { supabase } from "../../lib/supabase";
 import { categoryTint, color, font, radius, space } from "../../lib/theme";
 
@@ -99,6 +102,9 @@ export default function TasksScreen() {
   const [daysSince, setDaysSince] = useState<number | null>(null);
   const [celebrate, setCelebrate] = useState<{ gained: number; rank: { name: string; icon: string } | null } | null>(null);
   const [stats, setStats] = useState<{ done: number; people: number } | null>(null);
+  // задания на карте: моё текущее и ближайшие свободные
+  const [myTask, setMyTask] = useState<MapTask | null>(null);
+  const [nearby, setNearby] = useState<{ t: MapTask; d: number | null }[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,6 +179,21 @@ export default function TasksScreen() {
 
         const { data: st } = await supabase.rpc("get_community_stats");
         if (st) setStats(st as { done: number; people: number });
+
+        const { data: mt } = await supabase.rpc("get_map_tasks");
+        const mapTasks = (mt ?? []) as MapTask[];
+        setMyTask(mapTasks.find((x) => x.is_mine) ?? null);
+        // расстояние — только если геолокация уже разрешена; на главной разрешение не спрашиваем
+        let here: { lat: number; lng: number } | null = null;
+        if ((await Location.getForegroundPermissionsAsync()).granted) {
+          const pos = await Location.getLastKnownPositionAsync();
+          if (pos) here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        }
+        const free = mapTasks
+          .filter((x) => x.status === "available" && !x.is_my_report)
+          .map((x) => ({ t: x, d: here ? distanceM(here.lat, here.lng, x.lat, x.lng) : null }))
+          .sort((a, b) => (a.d ?? 0) - (b.d ?? 0));
+        setNearby(free.slice(0, 3));
       };
       loadProfile();
     }, [])
@@ -274,6 +295,43 @@ export default function TasksScreen() {
             <Ionicons name="chevron-forward" size={20} color={color.faint} />
           </PressScale>
         </Animated.View>
+
+        {(myTask || nearby.length > 0) && (
+          <Animated.View entering={enter(2)}>
+            <SectionHeader title="Рядом с вами" action="Открыть карту" onAction={() => router.push("/map")} />
+            <Card style={{ paddingVertical: space.x1 }}>
+              {myTask && (
+                <ListRow
+                  first
+                  title={myTask.title}
+                  subtitle={myTask.status === "under_review" ? "Ваш результат на проверке" : "Вы убираете это место"}
+                  onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(myTask.id) } })}
+                  leading={
+                    <RowIcon tint={color.lime}>
+                      <Ionicons name="walk-outline" size={20} color={color.forest} />
+                    </RowIcon>
+                  }
+                  trailing={<AppText style={s.rowPts}>+{myTask.points}</AppText>}
+                />
+              )}
+              {nearby.map(({ t, d }, i) => (
+                <ListRow
+                  key={t.id}
+                  first={!myTask && i === 0}
+                  title={t.title}
+                  subtitle={[d !== null ? formatDistance(d) : null, t.address].filter(Boolean).join(" · ") || reportCategory(t.category).label}
+                  onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(t.id) } })}
+                  leading={
+                    <RowIcon>
+                      <Ionicons name={reportCategory(t.category).icon} size={20} color={color.forest} />
+                    </RowIcon>
+                  }
+                  trailing={<AppText style={s.rowPts}>+{t.points}</AppText>}
+                />
+              ))}
+            </Card>
+          </Animated.View>
+        )}
 
         {(taskOfDay || (loading && ready)) && (
           <Animated.View entering={enter(2)}>

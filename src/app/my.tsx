@@ -5,10 +5,13 @@ import { RefreshControl, StyleSheet, Text, View } from "react-native";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
 import { EmptyState, ErrorState } from "../components/ui/empty-state";
-import { RowIcon } from "../components/ui/list-row";
+import { ListRow, RowIcon } from "../components/ui/list-row";
 import { Screen } from "../components/ui/screen";
+import { SectionHeader } from "../components/ui/section-header";
 import { Skeleton } from "../components/ui/skeleton";
 import { StatusPill } from "../components/ui/status-pill";
+import { reportCategory } from "../lib/reports";
+import { SPOT_STATUS, timeLeft } from "../lib/spot-tasks";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
 
@@ -18,6 +21,19 @@ type Row = {
   created_at: string;
   reject_reason: string | null;
   tasks: { emoji: string; title: string; points: number } | null;
+};
+
+/** Уборка места с карты (RPC get_my_spot_tasks). */
+type Spot = {
+  id: number;
+  title: string;
+  category: string;
+  points: number;
+  status: string;
+  claim_expires_at: string | null;
+  completed_at: string | null;
+  last_reject_reason: string | null;
+  address: string | null;
 };
 
 function Sum({ value, label }: { value: number; label: string }) {
@@ -32,6 +48,7 @@ function Sum({ value, label }: { value: number; label: string }) {
 export default function MyScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
+  const [spots, setSpots] = useState<Spot[]>([]);
   const [points, setPoints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -55,6 +72,9 @@ export default function MyScreen() {
       .order("created_at", { ascending: false });
     if (error) setError(error.message);
     else setRows(data as unknown as Row[]);
+
+    const { data: st } = await supabase.rpc("get_my_spot_tasks");
+    setSpots((st ?? []) as Spot[]);
     setLoading(false);
   }, []);
 
@@ -95,7 +115,40 @@ export default function MyScreen() {
         </View>
       )}
       {!loading && error && <ErrorState onRetry={load} />}
-      {!loading && !error && rows.length === 0 && (
+
+      {!loading && !error && spots.length > 0 && (
+        <>
+          <SectionHeader title="Уборка мест с карты" />
+          <View style={s.group}>
+            {spots.map((t, i) => (
+              <ListRow
+                key={t.id}
+                first={i === 0}
+                title={t.title}
+                subtitle={
+                  t.status === "in_progress"
+                    ? t.last_reject_reason
+                      ? `Вернули: ${t.last_reject_reason}`
+                      : `Осталось ${timeLeft(t.claim_expires_at)}`
+                    : t.status === "completed" && t.completed_at
+                    ? `Выполнено ${new Date(t.completed_at).toLocaleDateString("ru-RU")}`
+                    : SPOT_STATUS[t.status] ?? t.status
+                }
+                onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(t.id) } })}
+                leading={
+                  <RowIcon>
+                    <Ionicons name={reportCategory(t.category).icon} size={20} color={color.forest} />
+                  </RowIcon>
+                }
+                trailing={<StatusPill status={t.status} />}
+              />
+            ))}
+          </View>
+          {rows.length > 0 && <SectionHeader title="Повседневные задания" />}
+        </>
+      )}
+
+      {!loading && !error && rows.length === 0 && spots.length === 0 && (
         <EmptyState
           icon="leaf-outline"
           title="Пока нет заявок"
@@ -142,6 +195,7 @@ export default function MyScreen() {
 
 const s = StyleSheet.create({
   summary: { flexDirection: "row", gap: space.x2, marginTop: space.x5, marginBottom: space.x6 },
+  group: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line, borderRadius: radius.card, paddingHorizontal: space.x4, marginBottom: space.x2 },
   sum: { flex: 1, backgroundColor: color.sand, borderRadius: 18, padding: space.x3 },
   sumNum: { fontFamily: font.display, fontSize: 26, lineHeight: 32, color: color.ink },
   item: {
