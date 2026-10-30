@@ -62,13 +62,16 @@ EXPO_PUBLIC_SUPABASE_KEY=...   # anon/publishable key, НЕ service_role
 src/
   app/                    # ТОЛЬКО экраны (каждый файл = маршрут)
     _layout.tsx           # корневой Stack, заголовки скрыты
-    (tabs)/_layout.tsx    # нижние вкладки: Задания, Вузы, Рейтинг, Портфолио, Профиль
-    (tabs)/index.tsx      # главная: задания, питомец, статистика, проверка онбординга
+    (tabs)/_layout.tsx    # вкладки: Задания · Карта · ➕ (new.tsx → /report) · Рейтинг · Профиль;
+                          #   universities и portfolio скрыты из панели (href: null), вход из профиля; backBehavior="history"
+    (tabs)/index.tsx      # главная: задания, питомец, «Рядом с вами», статистика, проверка онбординга
+    (tabs)/map.tsx        # карта заданий: маркеры, фильтр, «где я», карточка задания
     (tabs)/universities.tsx, leaderboard.tsx, portfolio.tsx, profile.tsx
     login.tsx, safety.tsx, place.tsx, privacy.tsx
     task.tsx, my.tsx, edit-profile.tsx, settings.tsx, moderator.tsx
     report.tsx            # «Сообщить о загрязнении»: фото (камера/галерея), категория, описание, GPS + карта
     my-reports.tsx        # «Мои заявки» о загрязнении со статусами
+    spot/[id].tsx         # задание на карте: принять, маршрут, фото результата (камера + 200 м), отказаться
     university/[id].tsx   # подробности о вузе (по id из таблицы universities)
     tasks.txt             # пустой файл (назначение неизвестно — не удалять без согласования)
   components/             # переиспользуемые компоненты
@@ -80,12 +83,14 @@ src/
                           #   screen, app-text, button, card, chip, list-row (ListRow, RowIcon),
                           #   section-header, text-field, back-button, empty-state (EmptyState / ErrorState),
                           #   skeleton (Skeleton, SkeletonCard), status-pill
+    moderation/           # вкладки модерации: reports-review («Заявки»), results-review («Уборка»), shot (фото 3:4)
   lib/
     supabase.ts           # единственный клиент Supabase
     theme.ts              # дизайн-токены: color, categoryTint, space, radius, font, type
     universities.ts       # тип Uni и разбор направлений
     photos.ts             # takePhoto / pickPhoto / uploadPhoto(bucket, …) — общий код фото
     reports.ts            # категории загрязнения, getCurrentCoords (GPS с разрешениями), addressFor, KZ_REGION
+    spot-tasks.ts         # типы MapTask/SpotTask, DIFFICULTY, distanceM, formatDistance, timeLeft, openRoute
     ranks.ts              # ранги и пороги очков
     haptics.ts            # обёртки над expo-haptics
 assets/                   # иконки, сплэш
@@ -125,11 +130,28 @@ birth_year, parent_verified, is_moderator), `tasks` (emoji, title, description, 
 RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_safety_info`, `update_appearance`,
 `review_submission`, `penalize_submission`, `confirm_parent_consent`, `delete_my_account`.
 
-### Эко-система «сообщить → задание на карте → уборка» (в работе с 30.10.2026)
+### Эко-система «сообщить → задание на карте → уборка» (готова 30.10.2026, все 6 этапов)
 
-Утверждённый план (6 этапов): 1–2 заявки с фото и геолокацией ✅ → 3 модерация заявок и создание заданий →
-4 вкладка «Карта» → 5 принять задание / фото результата / подтверждение → 6 проверка сценария и новая навигация.
+Сценарий: заявка с фото → модератор публикует → задание на карте → другой участник принимает (бронь 48 ч) →
+убирает → фото результата в радиусе 200 м → модератор подтверждает → completed, очки исполнителю.
+Полный сценарий проверен в базе на трёх реальных аккаунтах в транзакции с откатом (19 проверок, все прошли).
 Старые «повседневные» задания (`tasks` + `submissions`) остаются как есть, новая система — рядом.
+
+- **`spot_tasks`** — задания на карте, создаются только `review_report(..., p_approve=true, p_title, p_difficulty, p_points)`:
+  report_id, author_id, title, description, category, difficulty (easy/medium/hard), points (10–300), lat/lng, address,
+  photo_paths, status `available → in_progress → under_review → completed` (+ `cancelled`), assignee_id, claimed_at,
+  claim_expires_at, result_photo_path/lat/lng/distance_m/submitted_at, reject_count, last_reject_reason, completed_at.
+  RLS: модераторы и свой исполнитель; всем остальным — только через RPC.
+  RPC: `get_map_tasks()`, `get_spot_task(id)` (json), `claim_task(id)` (атомарно, не своё, ≤ 2 активных, согласие),
+  `release_task(id)`, `submit_task_result(id, photo_path, lat, lng)` (≤ 200 м, фото из своей папки, бронь не истекла),
+  `get_my_spot_tasks()`; модерация — `get_reports_for_review()` (переводит submitted → under_review),
+  `review_report(...)` (+10 TZ автору; отклонение с причиной; `p_penalty` — обман),
+  `get_task_results_for_review()`, `review_task_result(id, approve, reason, penalty)` (approve → completed + очки;
+  отклонение → снова in_progress, +24 ч; penalty → available и штраф).
+  Внутренние (закрыты от клиента): `public_name(uid)` (дети ≤ 14 — «Участник», иначе никнейм или первое имя),
+  `release_expired_claims()` (вызывается внутри RPC, cron не нужен), `check_can_act(uid)`.
+  Storage: фото заявки видны всем вошедшим только после публикации задания (`is_visible_task_photo`).
+  `get_portfolio` и `get_community_stats` учитывают выполненные уборки (формат ответа прежний).
 
 - **`reports`** — заявки жителей: author_id, category (park/dump/road/river/yard/other), description (5–500),
   photo_paths (1–3, бакет `reports`), lat/lng (только Казахстан: 40–56 / 46–88), accuracy_m, address, region, place_name,
@@ -139,7 +161,7 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
   `geo_distance_m(...)` — расстояние в метрах (PostGIS не подключён).
 - **Бакет `reports`** — закрытый: загрузка в `<uid>/…`, чтение своих, модераторы читают все.
 - **Решения владельца:** название остаётся TazaNiyet; навигация «Задания · Карта · ➕ Сообщить · Рейтинг · Профиль»
-  (Вузы и Портфолио — в экран «Поступление», вход из профиля/главной; этап 6); очки: +10 TZ автору подтверждённой
+  (Вузы и Портфолио — скрытые вкладки, вход из профиля, группа «Поступление»); очки: +10 TZ автору подтверждённой
   заявки, уборка 30 / 60 / 100 TZ по сложности (модератор может изменить); фото результата отправляется только
   в радиусе ~200 м от точки; задание закрепляется за исполнителем на 48 ч; своё задание брать нельзя.
 - **Карта** — `react-native-maps` (Google Maps на Android; в Expo Go без ключа). Для APK нужен ключ Google Maps,
