@@ -1,11 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { ReportsReview } from "../components/moderation/reports-review";
+import { ResultsReview } from "../components/moderation/results-review";
+import { Shot } from "../components/moderation/shot";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import { Chip } from "../components/ui/chip";
 import { EmptyState } from "../components/ui/empty-state";
 import { RowIcon } from "../components/ui/list-row";
 import { Screen } from "../components/ui/screen";
@@ -30,25 +34,15 @@ type Item = {
   afterUrl?: string;
 };
 
-function Shot({ label, uri }: { label: string; uri?: string }) {
-  return (
-    <View style={{ flex: 1 }}>
-      <AppText variant="overline" style={{ marginBottom: space.x1 }}>
-        {label}
-      </AppText>
-      {uri ? (
-        <Image source={{ uri }} style={s.photo} />
-      ) : (
-        <View style={[s.photo, s.noPhoto]}>
-          <Ionicons name="image-outline" size={24} color={color.faint} />
-          <AppText variant="caption">Нет фото</AppText>
-        </View>
-      )}
-    </View>
-  );
-}
+// вкладки модерации: обычные задания, заявки о загрязнении, результаты уборки мест с карты
+const TABS = [
+  { k: "tasks", label: "Задания" },
+  { k: "reports", label: "Заявки" },
+  { k: "results", label: "Уборка" },
+] as const;
 
 export default function ModeratorScreen() {
+  const [tab, setTab] = useState<(typeof TABS)[number]["k"]>("tasks");
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
@@ -160,6 +154,17 @@ export default function ModeratorScreen() {
       <BackButton />
       <AppText variant="h1">Проверка заданий</AppText>
 
+      <View style={s.tabs}>
+        {TABS.map((t) => (
+          <Chip key={t.k} label={t.label} active={tab === t.k} onPress={() => setTab(t.k)} />
+        ))}
+      </View>
+
+      {tab === "reports" && <ReportsReview />}
+      {tab === "results" && <ResultsReview />}
+
+      {tab === "tasks" && (
+      <>
       <Card style={{ marginTop: space.x5 }}>
         <AppText variant="h3">Согласие родителей</AppText>
         <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>
@@ -266,17 +271,18 @@ export default function ModeratorScreen() {
             </Card>
           );
         })}
+      </>
+      )}
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
+  tabs: { flexDirection: "row", marginTop: space.x4 },
   card: { marginBottom: space.x4 },
   head: { flexDirection: "row", alignItems: "flex-start", gap: space.x3 },
   pts: { fontFamily: font.bold, fontSize: 14, color: color.forest },
   photos: { flexDirection: "row", gap: space.x3, marginTop: space.x4 },
-  photo: { width: "100%", aspectRatio: 3 / 4, borderRadius: radius.field, backgroundColor: color.sand },
-  noPhoto: { alignItems: "center", justifyContent: "center", gap: 4 },
   row: { flexDirection: "row", gap: space.x2, marginTop: space.x4 },
   rejectBox: { backgroundColor: color.cream, borderRadius: radius.field, padding: space.x3, marginTop: space.x3 },
   reason: {
