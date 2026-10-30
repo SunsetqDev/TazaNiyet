@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { PressScale } from "../../components/anim";
 import { AppText } from "../../components/ui/app-text";
+import { BackButton } from "../../components/ui/back-button";
 import { Chip } from "../../components/ui/chip";
 import { EmptyState, ErrorState } from "../../components/ui/empty-state";
 import { Screen } from "../../components/ui/screen";
@@ -91,6 +92,7 @@ export default function UniversitiesScreen() {
 
   return (
     <Screen>
+      <BackButton />
       <AppText variant="h1">Вузы и колледжи</AppText>
       <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>
         Куда можно поступить в Казахстане

@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { Alert, Share, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { AppText } from "../../components/ui/app-text";
+import { BackButton } from "../../components/ui/back-button";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { EmptyState } from "../../components/ui/empty-state";
@@ -146,6 +147,7 @@ export default function PortfolioScreen() {
 
   return (
     <Screen>
+      <BackButton />
       <AppText variant="h1">Портфолио</AppText>
       <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>
         Покажите код при поступлении или на конкурсе. Видны только имя, место, очки и названия принятых заданий. Фото не

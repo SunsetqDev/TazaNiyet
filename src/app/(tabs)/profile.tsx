@@ -176,6 +176,18 @@ export default function ProfileScreen() {
         <ListRow title="Мои заявки о загрязнении" leading={<MenuIcon name="camera-outline" />} onPress={() => router.push("/my-reports")} />
       </View>
 
+      <SectionHeader title="Поступление" />
+      <View style={s.group}>
+        <ListRow
+          first
+          title="Моё портфолио"
+          subtitle="QR-код с подтверждёнными заданиями"
+          leading={<MenuIcon name="qr-code-outline" />}
+          onPress={() => router.push("/portfolio")}
+        />
+        <ListRow title="Вузы и колледжи" subtitle="каталог и требования к поступлению" leading={<MenuIcon name="school-outline" />} onPress={() => router.push("/universities")} />
+      </View>
+
       <SectionHeader title="Аккаунт" />
       <View style={s.group}>
         <ListRow

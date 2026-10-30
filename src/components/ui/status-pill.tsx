@@ -12,6 +12,10 @@ const STATUS: Record<string, { label: string; icon: IconName; fg: string; bg: st
   // заявки о загрязнении (reports.status)
   submitted: { label: "Отправлено", icon: "paper-plane-outline", fg: color.muted, bg: color.sand },
   under_review: { label: "На проверке", icon: "time-outline", fg: color.warn, bg: color.warnSoft },
+  // задания на карте (spot_tasks.status)
+  available: { label: "Доступно", icon: "leaf-outline", fg: color.forest, bg: color.limeSoft },
+  in_progress: { label: "Выполняется", icon: "walk-outline", fg: color.ink, bg: color.sand },
+  completed: { label: "Выполнено", icon: "checkmark-done-outline", fg: color.forest, bg: color.limeSoft },
 };
 
 /** Статус заявки: submissions.status (pending / approved / rejected) или reports.status (+ submitted / under_review). */
