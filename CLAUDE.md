@@ -204,9 +204,12 @@ RPC и их параметров — это сломает приложение 
 ### Дизайн-система «Тихий лес»
 
 Редизайн всех экранов (этапы 0–6) выполнен 30.10.2026 в ветке GitHub `redesign` (SunsetqDev/TazaNiyet; локально — `redesign-github` в папке «Документы» → TazaNiyet). В `main` переходим только после
-проверки владельцем на Android-телефоне. Веб-версия не запускается и не нужна: при серверном рендере
-`web.output: "server"` AsyncStorage Supabase падает с `window is not defined`.
-Проверка сборки без телефона: `npx expo export --platform android --no-bytecode --output-dir dist` (потом удалить `dist`).
+проверки владельцем на Android-телефоне. Веб-версия не нужна.
+**`web.output` = `"single"` — не возвращать `"server"`:** с ним EAS при сборке APK (шаг EAGER_BUNDLE, включается
+вместе с expo-updates) делает серверную версию сайта, и AsyncStorage Supabase падает с `window is not defined` —
+сборка 30.10.2026 упала именно так.
+Проверка сборки без телефона: `npx expo export --platform android --no-bytecode --output-dir dist` (потом удалить `dist`)
+и шаг EAS локально: `npx expo export:embed --eager --platform android --dev false`.
 
 - **Токены** — `src/lib/theme.ts`: `color`, `categoryTint`, `space`, `radius`, `font`, `type`. Цвета и размеры
   в экранах — только через них (исключение — собственные цвета рисунков Барса и баобаба).
