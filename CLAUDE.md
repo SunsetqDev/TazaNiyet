@@ -115,7 +115,12 @@ global.css, scripts/reset-project.js и их картинки) удалены 30
   модератор смотрит их через signed URL.
 - Очки начисляет **только сервер** (RPC модератора). Клиент никогда не пишет `points` напрямую.
 
-### Backend (Supabase) — схема не хранится в репозитории
+### Backend (Supabase)
+
+**Резервная копия структуры базы** — `supabase/schema-backup.sql` (снимок 31.10.2026): таблицы, индексы, функции,
+права, RLS, триггеры, бакеты, справочные данные (tasks, universities); личных данных нет. Восстановление:
+SQL Editor нового проекта → весь файл → Run. **После изменений схемы базы — обновлять этот файл** (тот же
+запрос-снимок через Supabase MCP) и коммитить.
 
 Таблицы: `profiles` (name, nickname, avatar_emoji, avatar_color, points, region, place_name, place_type,
 birth_year, parent_verified, is_moderator), `tasks` (emoji, title, description, place_type, points, category),
