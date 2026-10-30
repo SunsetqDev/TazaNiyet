@@ -67,6 +67,8 @@ src/
     (tabs)/universities.tsx, leaderboard.tsx, portfolio.tsx, profile.tsx
     login.tsx, safety.tsx, place.tsx, privacy.tsx
     task.tsx, my.tsx, edit-profile.tsx, settings.tsx, moderator.tsx
+    report.tsx            # «Сообщить о загрязнении»: фото (камера/галерея), категория, описание, GPS + карта
+    my-reports.tsx        # «Мои заявки» о загрязнении со статусами
     university/[id].tsx   # подробности о вузе (по id из таблицы universities)
     tasks.txt             # пустой файл (назначение неизвестно — не удалять без согласования)
   components/             # переиспользуемые компоненты
@@ -82,6 +84,8 @@ src/
     supabase.ts           # единственный клиент Supabase
     theme.ts              # дизайн-токены: color, categoryTint, space, radius, font, type
     universities.ts       # тип Uni и разбор направлений
+    photos.ts             # takePhoto / pickPhoto / uploadPhoto(bucket, …) — общий код фото
+    reports.ts            # категории загрязнения, getCurrentCoords (GPS с разрешениями), addressFor, KZ_REGION
     ranks.ts              # ранги и пороги очков
     haptics.ts            # обёртки над expo-haptics
 assets/                   # иконки, сплэш
@@ -120,6 +124,28 @@ birth_year, parent_verified, is_moderator), `tasks` (emoji, title, description, 
 
 RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_safety_info`, `update_appearance`,
 `review_submission`, `penalize_submission`, `confirm_parent_consent`, `delete_my_account`.
+
+### Эко-система «сообщить → задание на карте → уборка» (в работе с 30.10.2026)
+
+Утверждённый план (6 этапов): 1–2 заявки с фото и геолокацией ✅ → 3 модерация заявок и создание заданий →
+4 вкладка «Карта» → 5 принять задание / фото результата / подтверждение → 6 проверка сценария и новая навигация.
+Старые «повседневные» задания (`tasks` + `submissions`) остаются как есть, новая система — рядом.
+
+- **`reports`** — заявки жителей: author_id, category (park/dump/road/river/yard/other), description (5–500),
+  photo_paths (1–3, бакет `reports`), lat/lng (только Казахстан: 40–56 / 46–88), accuracy_m, address, region, place_name,
+  status `submitted → under_review → approved | rejected`, reject_reason, reviewed_by/at. Прямой INSERT запрещён —
+  только RPC `submit_report(...)` (проверка безопасности/согласия как у заданий, лимит 5 в сутки, фото только из своей папки).
+  RLS: свои + модераторы. `count_nearby_reports(lat, lng, radius)` — число активных заявок рядом (предупреждение о дубле).
+  `geo_distance_m(...)` — расстояние в метрах (PostGIS не подключён).
+- **Бакет `reports`** — закрытый: загрузка в `<uid>/…`, чтение своих, модераторы читают все.
+- **Решения владельца:** название остаётся TazaNiyet; навигация «Задания · Карта · ➕ Сообщить · Рейтинг · Профиль»
+  (Вузы и Портфолио — в экран «Поступление», вход из профиля/главной; этап 6); очки: +10 TZ автору подтверждённой
+  заявки, уборка 30 / 60 / 100 TZ по сложности (модератор может изменить); фото результата отправляется только
+  в радиусе ~200 м от точки; задание закрепляется за исполнителем на 48 ч; своё задание брать нельзя.
+- **Карта** — `react-native-maps` (Google Maps на Android; в Expo Go без ключа). Для APK нужен ключ Google Maps,
+  ограниченный пакетом приложения, через плагин `react-native-maps` → `androidGoogleMapsApiKey` из переменной
+  окружения, не в коде. GPS — `expo-location` (только foreground). В `app.json` тексты разрешений;
+  микрофон у image-picker отключён (`microphonePermission: false`).
 
 Безопасность держится на RLS и RPC в Supabase. При изменении запросов не ломать имена таблиц, колонок,
 RPC и их параметров — это сломает приложение у всех пользователей. Изменения схемы БД — только с явного согласия.

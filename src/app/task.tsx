@@ -1,6 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { decode } from "base64-arraybuffer";
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
@@ -10,10 +8,9 @@ import { BackButton } from "../components/ui/back-button";
 import { Button } from "../components/ui/button";
 import { Screen } from "../components/ui/screen";
 import { SectionHeader } from "../components/ui/section-header";
+import { takePhoto, uploadPhoto, type Photo } from "../lib/photos";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
-
-type Photo = { uri: string; base64: string };
 
 function PhotoSlot({ label, photo, onPress, disabled }: { label: string; photo: Photo | null; onPress: () => void; disabled: boolean }) {
   return (
@@ -62,33 +59,9 @@ export default function TaskScreen() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const takePhoto = async (setter: (p: Photo) => void) => {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert("Нужен доступ к камере", "Разрешите камеру в настройках телефона.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (!asset.base64 || asset.base64.length < 1000) {
-      Alert.alert("Фото не получилось", "Сделайте фото ещё раз.");
-      return;
-    }
-    setter({ uri: asset.uri, base64: asset.base64 });
-  };
-
-  const uploadPhoto = async (photo: Photo, userId: string, label: string) => {
-    const path = `${userId}/${Date.now()}-${label}.jpg`;
-    const bytes = decode(photo.base64);
-    if (bytes.byteLength < 1000) {
-      throw new Error("Фото пустое. Сделайте его заново.");
-    }
-    const { error } = await supabase.storage
-      .from("submissions")
-      .upload(path, bytes, { contentType: "image/jpeg" });
-    if (error) throw error;
-    return path;
+  const snap = async (setter: (p: Photo) => void) => {
+    const p = await takePhoto();
+    if (p) setter(p);
   };
 
   const submit = async () => {
@@ -104,8 +77,8 @@ export default function TaskScreen() {
         router.replace("/login");
         return;
       }
-      const beforePath = await uploadPhoto(before, user.id, "before");
-      const afterPath = await uploadPhoto(after, user.id, "after");
+      const beforePath = await uploadPhoto("submissions", before, user.id, "before");
+      const afterPath = await uploadPhoto("submissions", after, user.id, "after");
       const { error } = await supabase.from("submissions").insert({
         task_id: Number(id),
         before_path: beforePath,
@@ -165,8 +138,8 @@ export default function TaskScreen() {
 
       <SectionHeader title="Фото" hint="до и после" />
       <View style={s.row}>
-        <PhotoSlot label="До" photo={before} onPress={() => takePhoto(setBefore)} disabled={sent} />
-        <PhotoSlot label="После" photo={after} onPress={() => takePhoto(setAfter)} disabled={sent} />
+        <PhotoSlot label="До" photo={before} onPress={() => snap(setBefore)} disabled={sent} />
+        <PhotoSlot label="После" photo={after} onPress={() => snap(setAfter)} disabled={sent} />
       </View>
       <View style={s.note}>
         <Ionicons name="lock-closed-outline" size={14} color={color.muted} />

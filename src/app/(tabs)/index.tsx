@@ -262,6 +262,19 @@ export default function TasksScreen() {
           )}
         </Animated.View>
 
+        <Animated.View entering={enter(2)}>
+          <PressScale onPress={() => router.push("/report")} scaleTo={0.98} style={s.report}>
+            <View style={s.reportIcon}>
+              <Ionicons name="camera-outline" size={24} color={color.forest} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText variant="h3">Сообщить о загрязнении</AppText>
+              <AppText variant="caption">Фото и место — после проверки станет заданием на карте</AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={color.faint} />
+          </PressScale>
+        </Animated.View>
+
         {(taskOfDay || (loading && ready)) && (
           <Animated.View entering={enter(2)}>
             <SectionHeader title="Задание дня" hint="обновится завтра" />
@@ -402,6 +415,18 @@ const s = StyleSheet.create({
     padding: space.x4,
     marginBottom: space.x4,
   },
+  report: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.x3,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: radius.card,
+    padding: space.x4,
+    marginTop: space.x4,
+  },
+  reportIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: color.lime, alignItems: "center", justifyContent: "center" },
   dayTop: { flexDirection: "row", gap: space.x3, alignItems: "flex-start" },
   dayIcon: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   dayBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.x2, marginTop: space.x4 },

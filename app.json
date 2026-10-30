@@ -34,7 +34,21 @@
           "imageWidth": 76
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TazaNiyet использует местоположение, чтобы отметить загрязнённое место и показать задания рядом с вами."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TazaNiyet использует галерею, чтобы прикрепить фото загрязнённого места.",
+          "cameraPermission": "TazaNiyet использует камеру, чтобы сфотографировать загрязнённое место и результат уборки.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -9,9 +9,12 @@ const STATUS: Record<string, { label: string; icon: IconName; fg: string; bg: st
   pending: { label: "На проверке", icon: "time-outline", fg: color.warn, bg: color.warnSoft },
   approved: { label: "Принято", icon: "checkmark-circle-outline", fg: color.forest, bg: color.limeSoft },
   rejected: { label: "Отклонено", icon: "close-circle-outline", fg: color.danger, bg: color.dangerSoft },
+  // заявки о загрязнении (reports.status)
+  submitted: { label: "Отправлено", icon: "paper-plane-outline", fg: color.muted, bg: color.sand },
+  under_review: { label: "На проверке", icon: "time-outline", fg: color.warn, bg: color.warnSoft },
 };
 
-/** Статус заявки (submissions.status): pending / approved / rejected. */
+/** Статус заявки: submissions.status (pending / approved / rejected) или reports.status (+ submitted / under_review). */
 export function StatusPill({ status }: { status: string }) {
   const st = STATUS[status] ?? STATUS.pending;
   return (

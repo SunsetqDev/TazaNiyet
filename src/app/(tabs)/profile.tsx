@@ -173,6 +173,7 @@ export default function ProfileScreen() {
       <SectionHeader title="Активность" />
       <View style={s.group}>
         <ListRow first title="Мои задания и статусы" leading={<MenuIcon name="list-outline" />} onPress={() => router.push("/my")} />
+        <ListRow title="Мои заявки о загрязнении" leading={<MenuIcon name="camera-outline" />} onPress={() => router.push("/my-reports")} />
       </View>
 
       <SectionHeader title="Аккаунт" />
