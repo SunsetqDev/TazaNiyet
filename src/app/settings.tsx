@@ -29,6 +29,10 @@ export default function SettingsScreen() {
               if (files && files.length > 0) {
                 await supabase.storage.from("submissions").remove(files.map((f) => `${uid}/${f.name}`));
               }
+              const { data: avatars } = await supabase.storage.from("avatars").list(uid, { limit: 100 });
+              if (avatars && avatars.length > 0) {
+                await supabase.storage.from("avatars").remove(avatars.map((f) => `${uid}/${f.name}`));
+              }
             }
             const { error } = await supabase.rpc("delete_my_account");
             if (error) {

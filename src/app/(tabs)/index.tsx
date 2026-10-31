@@ -18,6 +18,7 @@ import { ListRow, RowIcon } from "../../components/ui/list-row";
 import { Screen } from "../../components/ui/screen";
 import { SectionHeader } from "../../components/ui/section-header";
 import { Skeleton, SkeletonCard } from "../../components/ui/skeleton";
+import { avatarUrl } from "../../lib/avatar";
 import { getRank, getRankIndex } from "../../lib/ranks";
 import { reportCategory } from "../../lib/reports";
 import { distanceM, formatDistance, type MapTask } from "../../lib/spot-tasks";
@@ -81,6 +82,7 @@ export default function TasksScreen() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [name, setName] = useState("");
+  const [photo, setPhoto] = useState<string | null>(null);
   const [look, setLook] = useState<{ nickname: string | null; emoji: string | null; color: string | null }>({
     nickname: null,
     emoji: null,
@@ -117,7 +119,7 @@ export default function TasksScreen() {
         }
         const { data } = await supabase
           .from("profiles")
-          .select("name, nickname, avatar_emoji, avatar_color, points, region, place_name, place_type, birth_year, parent_verified")
+          .select("name, nickname, avatar_emoji, avatar_color, avatar_path, points, region, place_name, place_type, birth_year, parent_verified")
           .eq("id", user.id)
           .single();
         if (!data || !data.birth_year) {
@@ -129,6 +131,7 @@ export default function TasksScreen() {
           return;
         }
         setName(data.name ?? "");
+        avatarUrl(data.avatar_path).then(setPhoto);
         setLook({
           nickname: data.nickname ?? null,
           emoji: data.avatar_emoji ?? null,
@@ -257,7 +260,7 @@ export default function TasksScreen() {
             </AppText>
           </View>
           <PressScale onPress={() => router.push("/edit-profile")}>
-            <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} size={48} />
+            <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} photo={photo} size={48} />
           </PressScale>
         </Animated.View>
 

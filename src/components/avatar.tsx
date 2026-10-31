@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { color as palette, font } from "../lib/theme";
 
 export const AVATAR_EMOJIS = ["🐻", "🦊", "🐼", "🐨", "🦉", "🐸", "🐢", "🦋", "🐝", "🐬", "🦔", "🦦", "🐧", "🦜", "🌻", "🌲"];
@@ -9,12 +9,18 @@ type Props = {
   name?: string | null;
   emoji?: string | null;
   color?: string | null;
+  /** ссылка на фото-аватар (своё фото видит только владелец) — важнее эмодзи и буквы */
+  photo?: string | null;
   size?: number;
 };
 
-export function Avatar({ name, emoji, color, size = 52 }: Props) {
+export function Avatar({ name, emoji, color, photo, size = 52 }: Props) {
+  const round = { width: size, height: size, borderRadius: size / 2 };
+  if (photo) {
+    return <Image source={{ uri: photo }} style={[round, { backgroundColor: palette.sand }]} />;
+  }
   return (
-    <View style={[s.box, { width: size, height: size, borderRadius: size / 2, backgroundColor: color || palette.lime }]}>
+    <View style={[s.box, round, { backgroundColor: color || palette.lime }]}>
       {emoji ? (
         <Text style={{ fontSize: size * 0.52 }}>{emoji}</Text>
       ) : (

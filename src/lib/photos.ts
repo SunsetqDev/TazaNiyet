@@ -7,6 +7,10 @@ export type Photo = { uri: string; base64: string };
 
 const OPTIONS = { quality: 0.5, base64: true } as const;
 
+/** square — дать обрезать фото в квадрат (для аватара). */
+type PickOptions = { square?: boolean };
+const crop = (o?: PickOptions) => (o?.square ? { allowsEditing: true, aspect: [1, 1] as [number, number] } : {});
+
 function toPhoto(result: ImagePicker.ImagePickerResult): Photo | null {
   if (result.canceled) return null;
   const asset = result.assets[0];
@@ -18,18 +22,18 @@ function toPhoto(result: ImagePicker.ImagePickerResult): Photo | null {
 }
 
 /** Снимок с камеры. null — отмена, нет разрешения или пустое фото (пользователю уже показано сообщение). */
-export async function takePhoto(): Promise<Photo | null> {
+export async function takePhoto(o?: PickOptions): Promise<Photo | null> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
   if (!perm.granted) {
     Alert.alert("Нужен доступ к камере", "Разрешите камеру в настройках телефона.");
     return null;
   }
-  return toPhoto(await ImagePicker.launchCameraAsync(OPTIONS));
+  return toPhoto(await ImagePicker.launchCameraAsync({ ...OPTIONS, ...crop(o) }));
 }
 
 /** Фото из галереи (системный выбор фото Android, отдельное разрешение не нужно). */
-export async function pickPhoto(): Promise<Photo | null> {
-  return toPhoto(await ImagePicker.launchImageLibraryAsync({ ...OPTIONS, mediaTypes: ["images"] }));
+export async function pickPhoto(o?: PickOptions): Promise<Photo | null> {
+  return toPhoto(await ImagePicker.launchImageLibraryAsync({ ...OPTIONS, ...crop(o), mediaTypes: ["images"] }));
 }
 
 /** Загружает фото в бакет по пути `<userId>/<время>-<label>.jpg` и возвращает путь. */

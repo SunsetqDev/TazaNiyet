@@ -9,6 +9,7 @@ import { ListRow, RowIcon } from "../../components/ui/list-row";
 import { Screen } from "../../components/ui/screen";
 import { SectionHeader } from "../../components/ui/section-header";
 import { Skeleton } from "../../components/ui/skeleton";
+import { avatarUrl } from "../../lib/avatar";
 import { supabase } from "../../lib/supabase";
 import { color as palette, font, radius, space } from "../../lib/theme";
 
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
   const [nickname, setNickname] = useState<string | null>(null);
   const [emoji, setEmoji] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null);
   const [points, setPoints] = useState(0);
   const [approved, setApproved] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -66,13 +68,14 @@ export default function ProfileScreen() {
         }
         const { data: p } = await supabase
           .from("profiles")
-          .select("name, nickname, avatar_emoji, avatar_color, points, is_moderator")
+          .select("name, nickname, avatar_emoji, avatar_color, avatar_path, points, is_moderator")
           .eq("id", user.id)
           .single();
         setName(p?.name ?? "");
         setNickname(p?.nickname ?? null);
         setEmoji(p?.avatar_emoji ?? null);
         setColor(p?.avatar_color ?? null);
+        avatarUrl(p?.avatar_path).then(setPhoto);
         setPoints(p?.points ?? 0);
         setIsMod(p?.is_moderator === true);
 
@@ -118,7 +121,7 @@ export default function ProfileScreen() {
   return (
     <Screen>
       <View style={s.head}>
-        <Avatar name={nickname || name} emoji={emoji} color={color} size={88} />
+        <Avatar name={nickname || name} emoji={emoji} color={color} photo={photo} size={88} />
         {ready ? (
           <>
             <AppText variant="h1" style={{ marginTop: space.x3, textAlign: "center" }}>
