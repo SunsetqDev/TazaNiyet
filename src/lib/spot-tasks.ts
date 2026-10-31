@@ -38,6 +38,8 @@ export type SpotTask = {
   is_mine: boolean;
   claim_expires_at: string | null;
   last_reject_reason: string | null;
+  /** текущий пользователь — модератор (может снять свободное задание с карты) */
+  can_moderate: boolean;
 };
 
 export const DIFFICULTY: Record<string, { label: string; points: number }> = {

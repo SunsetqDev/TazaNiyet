@@ -155,6 +155,13 @@ export default function ReportScreen() {
       <AppText variant="body" color={color.muted} style={{ marginTop: space.x1 }}>
         Сфотографируйте место и отметьте его на карте. После проверки оно станет заданием для других участников.
       </AppText>
+      <Button
+        label="Мои заявки и их статусы"
+        icon="list-outline"
+        variant="ghost"
+        onPress={() => router.push("/my-reports")}
+        style={{ alignSelf: "flex-start", paddingHorizontal: 0 }}
+      />
 
       <SectionHeader title="Фото" hint={`${photos.length} из ${MAX_PHOTOS}`} />
       <View style={s.photos}>

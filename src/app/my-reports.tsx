@@ -4,7 +4,6 @@ import { useCallback, useState } from "react";
 import { Image, RefreshControl, StyleSheet, View } from "react-native";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
-import { Button } from "../components/ui/button";
 import { EmptyState, ErrorState } from "../components/ui/empty-state";
 import { Screen } from "../components/ui/screen";
 import { Skeleton } from "../components/ui/skeleton";
@@ -97,9 +96,7 @@ export default function MyReportsScreen() {
         <EmptyState
           icon="camera-outline"
           title="Вы ещё не сообщали о загрязнении"
-          text="Заметили мусор или свалку? Сфотографируйте место — после проверки его уберут другие участники."
-          action="Сообщить о загрязнении"
-          onAction={() => router.push("/report")}
+          text="Заметили мусор или свалку? Нажмите ➕ внизу экрана — после проверки место уберут другие участники."
         />
       )}
 
@@ -146,9 +143,6 @@ export default function MyReportsScreen() {
           );
         })}
 
-      {!loading && !error && rows.length > 0 && (
-        <Button label="Сообщить ещё" icon="add" variant="secondary" onPress={() => router.push("/report")} style={{ marginTop: space.x2 }} />
-      )}
     </Screen>
   );
 }

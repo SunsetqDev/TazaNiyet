@@ -164,9 +164,8 @@ export default function MapScreen() {
           <View style={s.sheet}>
             <AppText variant="h3">{tasks.length === 0 ? "На карте пока нет заданий" : "В этой категории пусто"}</AppText>
             <AppText variant="body" color={color.muted}>
-              Задания появляются из заявок жителей после проверки. Заметили мусор — сообщите о нём.
+              Задания появляются из заявок жителей после проверки. Заметили мусор — нажмите ➕ внизу экрана.
             </AppText>
-            <Button label="Сообщить о загрязнении" icon="camera-outline" onPress={() => router.push("/report")} style={{ marginTop: space.x3 }} />
           </View>
         </View>
       )}

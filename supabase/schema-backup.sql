@@ -1,4 +1,4 @@
--- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-10-30).
+-- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-10-31).
 -- Таблицы, индексы, функции (RPC), права, политики RLS, триггеры, бакеты Storage
 -- и справочные данные (повседневные задания, вузы).
 -- Личных данных пользователей (профили, заявки, фото) здесь НЕТ — они хранятся только в Supabase.
@@ -181,6 +181,30 @@ begin
   update submissions set status = 'approved' where id = sub_id;
   update profiles set points = points + p where id = s.user_id;
   return 'Готово: начислено ' || p || ' TZ';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.cancel_spot_task(p_id bigint, p_reason text DEFAULT NULL::text)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare t spot_tasks%rowtype;
+begin
+  if not is_moderator() then return 'Нет доступа'; end if;
+  perform release_expired_claims();
+  select * into t from spot_tasks where id = p_id for update;
+  if not found or t.status = 'cancelled' then return 'Задание не найдено или уже снято'; end if;
+  if t.status <> 'available' then
+    return 'Снять можно только свободное задание. Сейчас: ' ||
+      case t.status when 'in_progress' then 'его выполняет участник' when 'under_review' then 'результат на проверке'
+        when 'completed' then 'уже выполнено' else t.status end;
+  end if;
+  update spot_tasks set status = 'cancelled', last_reject_reason = nullif(trim(p_reason), ''), reviewed_by = auth.uid()
+   where id = p_id;
+  return 'Задание снято с карты';
 end;
 $function$
 ;
@@ -480,7 +504,8 @@ begin
     'photo_paths', t.photo_paths, 'status', t.status, 'created_at', t.created_at, 'completed_at', t.completed_at,
     'author_name', public_name(t.author_id), 'is_my_report', coalesce(t.author_id = uid, false), 'is_mine', mine,
     'claim_expires_at', case when mine then t.claim_expires_at end,
-    'last_reject_reason', case when mine then t.last_reject_reason end
+    'last_reject_reason', case when mine then t.last_reject_reason end,
+    'can_moderate', is_moderator()
   );
 end;
 $function$
@@ -862,6 +887,8 @@ grant SELECT on public.spot_tasks to authenticated;
 
 -- ===== Права на функции =====
 revoke all on function approve_submission(bigint) from public, anon, authenticated;
+revoke all on function cancel_spot_task(bigint,text) from public, anon, authenticated;
+grant execute on function cancel_spot_task(bigint,text) to authenticated;
 revoke all on function check_can_act(uuid) from public, anon, authenticated;
 revoke all on function check_safety_before_submit() from public, anon, authenticated;
 grant execute on function check_safety_before_submit() to authenticated;

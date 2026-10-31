@@ -51,7 +51,7 @@ export default function SpotTaskScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [dist, setDist] = useState<number | null>(null);
-  const [busy, setBusy] = useState<"claim" | "result" | "release" | null>(null);
+  const [busy, setBusy] = useState<"claim" | "result" | "release" | "cancel" | null>(null);
 
   const load = useCallback(async () => {
     setError(false);
@@ -115,6 +115,32 @@ export default function SpotTaskScreen() {
           setBusy(null);
           if (error) Alert.alert("Не получилось", error.message);
           await load();
+        },
+      },
+    ]);
+
+  // только модератор и только свободное задание (сервер проверяет то же самое)
+  const cancelTask = () =>
+    Alert.alert("Снять задание с карты?", "Оно пропадёт у всех участников. Отменить это нельзя.", [
+      { text: "Нет", style: "cancel" },
+      {
+        text: "Снять",
+        style: "destructive",
+        onPress: async () => {
+          setBusy("cancel");
+          const { data, error } = await supabase.rpc("cancel_spot_task", { p_id: Number(id), p_reason: null });
+          setBusy(null);
+          if (error) {
+            Alert.alert("Не получилось", error.message);
+            return;
+          }
+          if (data === "Задание снято с карты") {
+            Alert.alert("Готово", String(data));
+            router.back();
+          } else {
+            Alert.alert("Не получилось", String(data));
+            await load();
+          }
         },
       },
     ]);
@@ -294,6 +320,22 @@ export default function SpotTaskScreen() {
           стройки одни.
         </AppText>
       </View>
+
+      {t.can_moderate && (
+        <View style={s.modBox}>
+          <View style={s.modHead}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={color.danger} />
+            <AppText variant="overline" color={color.danger}>
+              Модератор
+            </AppText>
+          </View>
+          {t.status === "available" ? (
+            <Button label="Снять задание с карты" icon="trash-outline" variant="danger" onPress={cancelTask} loading={busy === "cancel"} />
+          ) : (
+            <AppText variant="caption">Снять с карты можно только свободное задание — сейчас его нельзя удалить.</AppText>
+          )}
+        </View>
+      )}
     </Screen>
   );
 }
@@ -329,5 +371,7 @@ const s = StyleSheet.create({
   map: { height: 170, borderRadius: radius.card, overflow: "hidden", backgroundColor: color.sand },
   addr: { flexDirection: "row", gap: 6, marginTop: space.x2 },
   safety: { flexDirection: "row", gap: 6, marginTop: space.x4, backgroundColor: color.sand, borderRadius: radius.field, padding: space.x3 },
+  modBox: { marginTop: space.x6, borderWidth: 1, borderColor: color.dangerSoft, borderRadius: radius.field, padding: space.x3, gap: space.x1 },
+  modHead: { flexDirection: "row", alignItems: "center", gap: 6 },
   footerRow: { flexDirection: "row", gap: space.x2 },
 });
