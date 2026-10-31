@@ -1,4 +1,4 @@
--- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-10-31).
+-- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-10-31, после фильтра ников, фото-аватаров и PDF-портфолио).
 -- Таблицы, индексы, функции (RPC), права, политики RLS, триггеры, бакеты Storage
 -- и справочные данные (повседневные задания, вузы).
 -- Личных данных пользователей (профили, заявки, фото) здесь НЕТ — они хранятся только в Supabase.
@@ -25,6 +25,7 @@ create table if not exists public.profiles (
   nickname text,
   avatar_emoji text,
   avatar_color text,
+  avatar_path text,
   constraint profiles_pkey PRIMARY KEY (id),
   constraint profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
@@ -154,6 +155,15 @@ create table if not exists public.spot_tasks (
 );
 alter table public.spot_tasks enable row level security;
 
+create table if not exists public.banned_words (
+  word text not null,
+  lang text not null,
+  created_at timestamp with time zone default now() not null,
+  constraint banned_words_pkey PRIMARY KEY (word),
+  constraint banned_words_lang_check CHECK ((lang = ANY (ARRAY['ru'::text, 'en'::text])))
+);
+alter table public.banned_words enable row level security;
+
 -- ===== Индексы =====
 CREATE UNIQUE INDEX one_pending_per_task ON public.submissions USING btree (user_id, task_id) WHERE (status = 'pending'::text);
 CREATE UNIQUE INDEX profiles_nickname_unique ON public.profiles USING btree (lower(nickname)) WHERE (nickname IS NOT NULL);
@@ -223,6 +233,26 @@ begin
   if extract(year from now())::int - p.birth_year <= 14 and not p.parent_verified then
     raise exception 'Нужно подтверждённое согласие родителей. Обратитесь к учителю или проверяющему';
   end if;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.check_nickname(p_nick text)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare n text := nullif(trim(p_nick), ''); problem text;
+begin
+  if auth.uid() is null then return 'Нужно войти в аккаунт'; end if;
+  if n is null then return null; end if;
+  problem := nick_problem(n);
+  if problem is not null then return problem; end if;
+  if exists (select 1 from profiles where lower(nickname) = lower(n) and id <> auth.uid()) then
+    return 'Этот ник уже занят';
+  end if;
+  return null;
 end;
 $function$
 ;
@@ -561,6 +591,46 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.nick_problem(p_nick text)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  raw text := lower(coalesce(p_nick, ''));
+  base text;
+  v_look text; v_phon text; v_en text;
+begin
+  if raw ~ '18\+|\+18|xxx|ххх' then return 'Этот ник нельзя использовать: в нём недопустимое слово'; end if;
+  -- цифры и символы, которыми маскируют буквы
+  base := translate(raw, '0346@$', 'озчбас');
+  base := translate(base, 'ёәғқңөұүһі', 'еагкноуухи');
+  -- 1) латинские буквы, похожие на русские (xyй → хуй); остальная латиница — «разрыв», чтобы не склеивать слово из частей имени
+  v_look := translate(base, 'aceopxykmthbu', 'асеорхукмтнви');
+  v_look := regexp_replace(v_look, '[a-z]', '|', 'g');
+  -- 2) латиница «по звучанию»: blyat → блят, suka → сука
+  v_phon := base;
+  v_phon := replace(replace(replace(replace(replace(v_phon, 'shch', 'щ'), 'sch', 'щ'), 'sh', 'ш'), 'ch', 'ч'), 'zh', 'ж');
+  v_phon := replace(replace(replace(replace(replace(replace(v_phon, 'kh', 'х'), 'ts', 'ц'), 'ya', 'я'), 'yu', 'ю'), 'yo', 'е'), 'ye', 'е');
+  v_phon := translate(v_phon, 'abvgdezijklmnoprstufhcywqx', 'абвгдезийклмнопрстуфхкйвкх');
+  -- только кириллица (и «разрывы»), без ь/ъ и повторов букв (хуууй → хуй)
+  v_look := regexp_replace(regexp_replace(translate(v_look, 'ьъ', ''), '[^а-я|]', '', 'g'), '(.)\1+', '\1', 'g');
+  v_phon := regexp_replace(regexp_replace(translate(v_phon, 'ьъ', ''), '[^а-я]', '', 'g'), '(.)\1+', '\1', 'g');
+  -- 3) английские слова
+  v_en := translate(raw, '01345@$7', 'oieasast');
+  v_en := regexp_replace(regexp_replace(v_en, '[^a-z]', '', 'g'), '(.)\1+', '\1', 'g');
+
+  if exists (select 1 from banned_words w where
+      (w.lang = 'ru' and (strpos(v_look, w.word) > 0 or strpos(v_phon, w.word) > 0))
+   or (w.lang = 'en' and strpos(v_en, w.word) > 0)) then
+    return 'Этот ник нельзя использовать: в нём недопустимое слово';
+  end if;
+  return null;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.penalize_submission(sub_id bigint, penalty integer DEFAULT 0)
  RETURNS text
  LANGUAGE plpgsql
@@ -816,7 +886,7 @@ end;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.update_appearance(p_nickname text, p_emoji text, p_color text)
+CREATE OR REPLACE FUNCTION public.update_appearance(p_nickname text, p_emoji text, p_color text, p_avatar_path text DEFAULT NULL::text)
  RETURNS text
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -824,6 +894,7 @@ CREATE OR REPLACE FUNCTION public.update_appearance(p_nickname text, p_emoji tex
 AS $function$
 declare
   n text := nullif(trim(p_nickname), '');
+  problem text;
 begin
   if auth.uid() is null then
     return 'Нужно войти в аккаунт';
@@ -835,6 +906,10 @@ begin
     end if;
     if n !~ '^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі0-9_.-]+$' then
       return 'Ник: только буквы, цифры и символы _ . -';
+    end if;
+    problem := nick_problem(n);
+    if problem is not null then
+      return problem;
     end if;
     if exists (select 1 from profiles where lower(nickname) = lower(n) and id <> auth.uid()) then
       return 'Этот ник уже занят';
@@ -851,8 +926,13 @@ begin
     return 'Недопустимый цвет';
   end if;
 
+  if p_avatar_path is not null and p_avatar_path <> '' and split_part(p_avatar_path, '/', 1) <> auth.uid()::text then
+    return 'Недопустимое фото';
+  end if;
+
   update profiles
-    set nickname = n, avatar_emoji = p_emoji, avatar_color = p_color
+    set nickname = n, avatar_emoji = p_emoji, avatar_color = p_color,
+        avatar_path = case when p_avatar_path is null then avatar_path else nullif(p_avatar_path, '') end
     where id = auth.uid();
 
   return 'ok';
@@ -884,12 +964,15 @@ revoke all on public.reports from anon, authenticated;
 grant SELECT on public.reports to authenticated;
 revoke all on public.spot_tasks from anon, authenticated;
 grant SELECT on public.spot_tasks to authenticated;
+revoke all on public.banned_words from anon, authenticated;
 
 -- ===== Права на функции =====
 revoke all on function approve_submission(bigint) from public, anon, authenticated;
 revoke all on function cancel_spot_task(bigint,text) from public, anon, authenticated;
 grant execute on function cancel_spot_task(bigint,text) to authenticated;
 revoke all on function check_can_act(uuid) from public, anon, authenticated;
+revoke all on function check_nickname(text) from public, anon, authenticated;
+grant execute on function check_nickname(text) to authenticated;
 revoke all on function check_safety_before_submit() from public, anon, authenticated;
 grant execute on function check_safety_before_submit() to authenticated;
 grant execute on function check_safety_before_submit() to anon;
@@ -931,6 +1014,7 @@ grant execute on function is_moderator() to authenticated;
 grant execute on function is_moderator() to anon;
 revoke all on function is_visible_task_photo(text) from public, anon, authenticated;
 grant execute on function is_visible_task_photo(text) to authenticated;
+revoke all on function nick_problem(text) from public, anon, authenticated;
 revoke all on function penalize_submission(bigint,integer) from public, anon, authenticated;
 grant execute on function penalize_submission(bigint,integer) to authenticated;
 revoke all on function public_name(uuid) from public, anon, authenticated;
@@ -949,8 +1033,8 @@ revoke all on function submit_report(text,text,text[],double precision,double pr
 grant execute on function submit_report(text,text,text[],double precision,double precision,real,text) to authenticated;
 revoke all on function submit_task_result(bigint,text,double precision,double precision) from public, anon, authenticated;
 grant execute on function submit_task_result(bigint,text,double precision,double precision) to authenticated;
-revoke all on function update_appearance(text,text,text) from public, anon, authenticated;
-grant execute on function update_appearance(text,text,text) to authenticated;
+revoke all on function update_appearance(text,text,text,text) from public, anon, authenticated;
+grant execute on function update_appearance(text,text,text,text) to authenticated;
 
 -- ===== Политики доступа (RLS) =====
 create policy "Create own link" on public.portfolio_links as PERMISSIVE for INSERT to authenticated with check ((auth.uid() = user_id));
@@ -967,12 +1051,15 @@ create policy "Moderators read all submissions" on public.submissions as PERMISS
 create policy "Read own submissions" on public.submissions as PERMISSIVE for SELECT to authenticated using ((auth.uid() = user_id));
 create policy "Tasks are public" on public.tasks as PERMISSIVE for SELECT to public using (true);
 create policy "Universities are public" on public.universities as PERMISSIVE for SELECT to public using (true);
+create policy "Delete own avatar" on storage.objects as PERMISSIVE for DELETE to authenticated using (((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 create policy "Delete own photos" on storage.objects as PERMISSIVE for DELETE to authenticated using (((bucket_id = 'submissions'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 create policy "Moderators read all photos" on storage.objects as PERMISSIVE for SELECT to authenticated using (((bucket_id = 'submissions'::text) AND is_moderator()));
 create policy "Moderators read report photos" on storage.objects as PERMISSIVE for SELECT to authenticated using (((bucket_id = 'reports'::text) AND is_moderator()));
+create policy "Read own avatar" on storage.objects as PERMISSIVE for SELECT to authenticated using (((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 create policy "Read own photos" on storage.objects as PERMISSIVE for SELECT to authenticated using (((bucket_id = 'submissions'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 create policy "Read own report photos" on storage.objects as PERMISSIVE for SELECT to authenticated using (((bucket_id = 'reports'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 create policy "Read task photos" on storage.objects as PERMISSIVE for SELECT to authenticated using (((bucket_id = 'reports'::text) AND is_visible_task_photo(name)));
+create policy "Upload own avatar" on storage.objects as PERMISSIVE for INSERT to authenticated with check (((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 create policy "Upload own photos" on storage.objects as PERMISSIVE for INSERT to authenticated with check (((bucket_id = 'submissions'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 create policy "Upload own report photos" on storage.objects as PERMISSIVE for INSERT to authenticated with check (((bucket_id = 'reports'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)));
 
@@ -982,9 +1069,11 @@ CREATE TRIGGER submissions_limits BEFORE INSERT ON public.submissions FOR EACH R
 CREATE TRIGGER submissions_safety BEFORE INSERT ON public.submissions FOR EACH ROW EXECUTE FUNCTION check_safety_before_submit();
 
 -- ===== Хранилище (бакеты) =====
-insert into storage.buckets (id, name, public) values ('reports', 'reports', f) on conflict (id) do nothing;
-insert into storage.buckets (id, name, public) values ('submissions', 'submissions', f) on conflict (id) do nothing;
-insert into storage.buckets (id, name, public) values ('uni-photos', 'uni-photos', t) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public) values ('avatars', 'avatars', false) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public) values ('portfolios', 'portfolios', false) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public) values ('reports', 'reports', false) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public) values ('submissions', 'submissions', false) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public) values ('uni-photos', 'uni-photos', true) on conflict (id) do nothing;
 
 -- ===== Справочные данные: повседневные задания =====
 insert into public.tasks (id, emoji, title, description, place_type, points, category) overriding system value values
@@ -1014,20 +1103,131 @@ insert into public.universities (id, name, city, type, website, description, pro
   (4, 'Satbayev University', 'Алматы', 'university', 'https://satbayev.university', 'Технический университет: горное дело, нефть и газ, IT, инженерия.', 'Горное дело, Нефть и газ, Информационные технологии, Инженерия', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Satbayev_University_2.jpg', 'Приём по результатам ЕНТ. Порог для национальных вузов — 65 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
   (5, 'КБТУ', 'Алматы', 'university', 'https://kbtu.kz', 'Казахстанско-Британский технический университет.', 'Нефтегазовое дело, Информационные технологии, Бизнес, Энергетика', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/KBTU%20University.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
   (6, 'Актюбинский региональный университет им. К. Жубанова', 'Актобе', 'university', 'https://arsu.kz', 'Главный государственный университет Актобе.', 'Педагогика, Естественные науки, Филология, Экономика', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/3_nzAdz5R.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
-  (7, 'Казахский национальный медицинский университет им. С.Д. Асфендиярова', 'Алматы', 'university', 'https://kaznmu.edu.kz', 'Ведущий медицинский вуз Казахстана, открыт в 1931 году.', 'Общая медицина, Стоматология, Фармация, Общественное здравоохранение, Сестринское дело', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог для медицинских программ — 70 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
-  (8, 'Almaty Management University (AlmaU)', 'Алматы', 'university', 'https://almau.edu.kz', 'Один из первых бизнес-вузов Казахстана: бакалавриат, магистратура, MBA и DBA.', 'Менеджмент, Экономика, Бизнес-администрирование', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
-  (9, 'Университет Нархоз', 'Алматы', 'university', 'https://narxoz.kz', 'Основан в 1963 году как Алматинский институт народного хозяйства, нынешнее название — с 2016 года.', 'Экономика, Бизнес, Финансы, Право', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Narxoz University, CC BY-SA 4.0, Wikimedia Commons'),
-  (10, 'Карагандинский университет им. Е.А. Букетова', 'Караганда', 'university', 'https://buketov.edu.kz', 'Основан в 1972 году как Карагандинский государственный университет. Имеет статус национального университета.', 'Педагогика, Естественные науки, Право, Экономика, Филология', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог для национальных вузов — 65 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Nikolay Olkhovoy, CC BY 3.0, Wikimedia Commons'),
-  (11, 'Международный университет информационных технологий (МУИТ)', 'Алматы', 'university', 'https://iitu.edu.kz', 'IT-университет, основан в 2009 году в Алматы.', 'Информационные технологии, Программная инженерия, Кибербезопасность, Телекоммуникации', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'МаратД, CC BY-SA 4.0, Wikimedia Commons'),
-  (12, 'Медицинский университет Астана', 'Астана', 'university', 'http://www.amu.kz', 'Основан в 1964 году как Целиноградский государственный медицинский институт, нынешнее название — с 2009 года.', 'Общая медицина, Стоматология, Сестринское дело, Общественное здравоохранение, Фармация', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог для медицинских программ — 70 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
-  (13, 'Западно-Казахстанский медицинский университет им. Марата Оспанова', 'Актобе', 'university', 'https://ospanov.university', 'Медицинский университет, основан в 1957 году как Актюбинский государственный медицинский институт. Имя Марата Оспанова — с 2009 года.', 'Общая медицина, Стоматология, Фармация, Сестринское дело, Общественное здравоохранение', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог для медицинских программ — 70 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
-  (14, 'SDU University', 'Каскелен', 'university', 'https://sdu.edu.kz', 'Частный международный университет, основан в 1996 году (Университет имени Сулеймана Демиреля). Кампус — в Каскелене, Алматинская область.', 'Инженерия и естественные науки, Бизнес, Право и социальные науки, Педагогика и гуманитарные науки', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Suleyman Demirel University, CC BY-SA 3.0, Wikimedia Commons'),
-  (15, 'Южно-Казахстанский университет им. М. Ауэзова', 'Шымкент', 'university', 'https://auezov.edu.kz', 'Государственный университет в Шымкенте, основан в 1943 году. Нынешнее название — с 1998 года.', 'Инженерия и технологии, Строительство, Педагогика, Экономика, Право', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'TheGreatSteppe, CC BY-SA 4.0, Wikimedia Commons'),
-  (16, 'Казахский национальный педагогический университет им. Абая', 'Алматы', 'university', 'https://abai.university', 'Первый вуз Казахстана, основан в 1928 году. Ведущий педагогический университет страны.', 'Педагогика и психология, Математика и информатика, Естественные науки, Филология, История, Искусство', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог для педагогических программ — 75 баллов, для остальных программ национального вуза — 65. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Mheidegger, общественное достояние, Wikimedia Commons'),
-  (17, 'Торайгыров университет', 'Павлодар', 'university', 'https://tou.edu.kz', 'Университет в Павлодаре, начинался как Павлодарский индустриальный институт. 9 факультетов.', 'Инженерия, Энергетика, Педагогика, Экономика, Право', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
-  (18, 'Astana IT University', 'Астана', 'university', 'https://astanait.edu.kz', 'IT-университет, открыт в 2019 году в рамках госпрограммы «Цифровой Казахстан». Кампус находится на территории бывшей выставки EXPO.', 'Информационные технологии, Программная инженерия, Кибербезопасность', '2026-10-30', NULL, 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'ZhamilyaYeshen, CC BY-SA 4.0, Wikimedia Commons'),
-  (19, 'KIMEP University', 'Алматы', 'university', 'https://kimep.kz', 'Частный университет, основан в 1992 году. Обучение ведётся на английском языке.', 'Бизнес, Экономика, Право, Международные отношения, Журналистика', '2026-10-30', NULL, 'Собственные требования: сертификат по английскому (IELTS, TOEFL, Duolingo и др.) или внутренний тест KEPT; минимальные баллы зависят от категории поступающего. Для программы Computer Science — тест по математике. Приём заявок открывается 15 октября. Подробности — на kimep.kz.', 'KIMEP, CC BY-SA 3.0, Wikimedia Commons')
+  (7, 'Казахский национальный медицинский университет им. С.Д. Асфендиярова', 'Алматы', 'university', 'https://kaznmu.edu.kz', 'Ведущий медицинский вуз Казахстана, открыт в 1931 году.', 'Общая медицина, Стоматология, Фармация, Общественное здравоохранение, Сестринское дело', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Asfandiyarov.jpg', 'Приём по результатам ЕНТ. Порог для медицинских программ — 70 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
+  (8, 'Almaty Management University (AlmaU)', 'Алматы', 'university', 'https://almau.edu.kz', 'Один из первых бизнес-вузов Казахстана: бакалавриат, магистратура, MBA и DBA.', 'Менеджмент, Экономика, Бизнес-администрирование', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/AlmaU.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
+  (9, 'Университет Нархоз', 'Алматы', 'university', 'https://narxoz.kz', 'Основан в 1963 году как Алматинский институт народного хозяйства, нынешнее название — с 2016 года.', 'Экономика, Бизнес, Финансы, Право', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Narxoz.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Narxoz University, CC BY-SA 4.0, Wikimedia Commons'),
+  (10, 'Карагандинский университет им. Е.А. Букетова', 'Караганда', 'university', 'https://buketov.edu.kz', 'Основан в 1972 году как Карагандинский государственный университет. Имеет статус национального университета.', 'Педагогика, Естественные науки, Право, Экономика, Филология', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Buketov.jpg', 'Приём по результатам ЕНТ. Порог для национальных вузов — 65 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Nikolay Olkhovoy, CC BY 3.0, Wikimedia Commons'),
+  (11, 'Международный университет информационных технологий (МУИТ)', 'Алматы', 'university', 'https://iitu.edu.kz', 'IT-университет, основан в 2009 году в Алматы.', 'Информационные технологии, Программная инженерия, Кибербезопасность, Телекоммуникации', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Muit.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'МаратД, CC BY-SA 4.0, Wikimedia Commons'),
+  (12, 'Медицинский университет Астана', 'Астана', 'university', 'http://www.amu.kz', 'Основан в 1964 году как Целиноградский государственный медицинский институт, нынешнее название — с 2009 года.', 'Общая медицина, Стоматология, Сестринское дело, Общественное здравоохранение, Фармация', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Astana%20medicine.jpg', 'Приём по результатам ЕНТ. Порог для медицинских программ — 70 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
+  (13, 'Западно-Казахстанский медицинский университет им. Марата Оспанова', 'Актобе', 'university', 'https://ospanov.university', 'Медицинский университет, основан в 1957 году как Актюбинский государственный медицинский институт. Имя Марата Оспанова — с 2009 года.', 'Общая медицина, Стоматология, Фармация, Сестринское дело, Общественное здравоохранение', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/ospanov.jpg', 'Приём по результатам ЕНТ. Порог для медицинских программ — 70 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
+  (14, 'SDU University', 'Каскелен', 'university', 'https://sdu.edu.kz', 'Частный международный университет, основан в 1996 году (Университет имени Сулеймана Демиреля). Кампус — в Каскелене, Алматинская область.', 'Инженерия и естественные науки, Бизнес, Право и социальные науки, Педагогика и гуманитарные науки', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/SDU.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Suleyman Demirel University, CC BY-SA 3.0, Wikimedia Commons'),
+  (15, 'Южно-Казахстанский университет им. М. Ауэзова', 'Шымкент', 'university', 'https://auezov.edu.kz', 'Государственный университет в Шымкенте, основан в 1943 году. Нынешнее название — с 1998 года.', 'Инженерия и технологии, Строительство, Педагогика, Экономика, Право', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Auezov.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'TheGreatSteppe, CC BY-SA 4.0, Wikimedia Commons'),
+  (16, 'Казахский национальный педагогический университет им. Абая', 'Алматы', 'university', 'https://abai.university', 'Первый вуз Казахстана, основан в 1928 году. Ведущий педагогический университет страны.', 'Педагогика и психология, Математика и информатика, Естественные науки, Филология, История, Искусство', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Abai.jpg', 'Приём по результатам ЕНТ. Порог для педагогических программ — 75 баллов, для остальных программ национального вуза — 65. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'Mheidegger, общественное достояние, Wikimedia Commons'),
+  (17, 'Торайгыров университет', 'Павлодар', 'university', 'https://tou.edu.kz', 'Университет в Павлодаре, начинался как Павлодарский индустриальный институт. 9 факультетов.', 'Инженерия, Энергетика, Педагогика, Экономика, Право', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/TORAIGHYROV.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов; для педагогических и юридических программ — 75. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', NULL),
+  (18, 'Astana IT University', 'Астана', 'university', 'https://astanait.edu.kz', 'IT-университет, открыт в 2019 году в рамках госпрограммы «Цифровой Казахстан». Кампус находится на территории бывшей выставки EXPO.', 'Информационные технологии, Программная инженерия, Кибербезопасность', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/AITU.jpg', 'Приём по результатам ЕНТ. Порог ЕНТ — 50 баллов. Минимум по предметам: 5 баллов по истории Казахстана и профильным предметам, 3 — по грамотности чтения и математической грамотности. Пороги — на 2025/2026 учебный год; проходной балл на грант определяется конкурсом. Точные условия по программам и сроки — на сайте вуза.', 'ZhamilyaYeshen, CC BY-SA 4.0, Wikimedia Commons'),
+  (19, 'KIMEP University', 'Алматы', 'university', 'https://kimep.kz', 'Частный университет, основан в 1992 году. Обучение ведётся на английском языке.', 'Бизнес, Экономика, Право, Международные отношения, Журналистика', '2026-10-30', 'https://enttuyexvsioismfjnhe.supabase.co/storage/v1/object/public/uni-photos/Kimep.jpg', 'Собственные требования: сертификат по английскому (IELTS, TOEFL, Duolingo и др.) или внутренний тест KEPT; минимальные баллы зависят от категории поступающего. Для программы Computer Science — тест по математике. Приём заявок открывается 15 октября. Подробности — на kimep.kz.', 'KIMEP, CC BY-SA 3.0, Wikimedia Commons')
 on conflict (id) do nothing;
+
+-- ===== Справочные данные: запрещённые слова для ников =====
+insert into public.banned_words (word, lang) values
+  ('ashole', 'en'),
+  ('bastard', 'en'),
+  ('bitch', 'en'),
+  ('blyat', 'en'),
+  ('boob', 'en'),
+  ('cock', 'en'),
+  ('cunt', 'en'),
+  ('dick', 'en'),
+  ('ebat', 'en'),
+  ('fagot', 'en'),
+  ('fck', 'en'),
+  ('fuck', 'en'),
+  ('fuk', 'en'),
+  ('horny', 'en'),
+  ('huy', 'en'),
+  ('niger', 'en'),
+  ('nude', 'en'),
+  ('penis', 'en'),
+  ('pizd', 'en'),
+  ('porn', 'en'),
+  ('pusy', 'en'),
+  ('sex', 'en'),
+  ('shit', 'en'),
+  ('slut', 'en'),
+  ('suka', 'en'),
+  ('tits', 'en'),
+  ('whore', 'en'),
+  ('аменди', 'ru'),
+  ('амын', 'ru'),
+  ('бля', 'ru'),
+  ('бляд', 'ru'),
+  ('блят', 'ru'),
+  ('вагин', 'ru'),
+  ('выеб', 'ru'),
+  ('гавн', 'ru'),
+  ('гандон', 'ru'),
+  ('говн', 'ru'),
+  ('голая', 'ru'),
+  ('голые', 'ru'),
+  ('гондон', 'ru'),
+  ('даун', 'ru'),
+  ('дебил', 'ru'),
+  ('дермо', 'ru'),
+  ('доеб', 'ru'),
+  ('долбоеб', 'ru'),
+  ('дроч', 'ru'),
+  ('ебал', 'ru'),
+  ('ебан', 'ru'),
+  ('ебат', 'ru'),
+  ('еблан', 'ru'),
+  ('ебло', 'ru'),
+  ('ебну', 'ru'),
+  ('ебуч', 'ru'),
+  ('жалап', 'ru'),
+  ('жопа', 'ru'),
+  ('жопу', 'ru'),
+  ('жопы', 'ru'),
+  ('заеб', 'ru'),
+  ('залуп', 'ru'),
+  ('засран', 'ru'),
+  ('котак', 'ru'),
+  ('мандавош', 'ru'),
+  ('минет', 'ru'),
+  ('мудак', 'ru'),
+  ('мудил', 'ru'),
+  ('мудоз', 'ru'),
+  ('наеб', 'ru'),
+  ('обосра', 'ru'),
+  ('педер', 'ru'),
+  ('педик', 'ru'),
+  ('пезд', 'ru'),
+  ('пенис', 'ru'),
+  ('пидар', 'ru'),
+  ('пидор', 'ru'),
+  ('пидр', 'ru'),
+  ('пизд', 'ru'),
+  ('писюн', 'ru'),
+  ('поеб', 'ru'),
+  ('порев', 'ru'),
+  ('порн', 'ru'),
+  ('проститу', 'ru'),
+  ('разеб', 'ru'),
+  ('секс', 'ru'),
+  ('сигеин', 'ru'),
+  ('сигем', 'ru'),
+  ('сиктир', 'ru'),
+  ('сиськ', 'ru'),
+  ('сука', 'ru'),
+  ('суки', 'ru'),
+  ('сучар', 'ru'),
+  ('сучк', 'ru'),
+  ('трахал', 'ru'),
+  ('трахат', 'ru'),
+  ('трахн', 'ru'),
+  ('уеба', 'ru'),
+  ('уебо', 'ru'),
+  ('хуе', 'ru'),
+  ('хуи', 'ru'),
+  ('хуй', 'ru'),
+  ('хуло', 'ru'),
+  ('хуя', 'ru'),
+  ('чмо', 'ru'),
+  ('шалав', 'ru'),
+  ('шешенди', 'ru'),
+  ('шлюх', 'ru'),
+  ('шлюшк', 'ru'),
+  ('эротик', 'ru')
+on conflict (word) do nothing;
 
 -- счётчики id после вставки данных с явными id
 select setval(pg_get_serial_sequence('public.tasks', 'id'), (select max(id) from public.tasks));

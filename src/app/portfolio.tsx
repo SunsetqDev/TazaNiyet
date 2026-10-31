@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Share, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
@@ -89,6 +89,7 @@ export default function PortfolioScreen() {
   const [input, setInput] = useState("");
   const [checked, setChecked] = useState<Result | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const load = useCallback(async () => {
     const { data: s } = await supabase.auth.getSession();
@@ -134,6 +135,26 @@ export default function PortfolioScreen() {
         },
       },
     ]);
+  };
+
+  // PDF собирает функция на сервере (portfolio-pdf) и возвращает временную ссылку на файл
+  const downloadPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("portfolio-pdf");
+      if (error || !data?.url) {
+        let msg = "Проверьте интернет и попробуйте снова.";
+        try {
+          const body = await (error as any)?.context?.json();
+          if (body?.error) msg = body.error;
+        } catch {}
+        Alert.alert("Не удалось скачать PDF", msg);
+        return;
+      }
+      await Linking.openURL(data.url);
+    } finally {
+      setPdfBusy(false);
+    }
   };
 
   const verify = async () => {
@@ -183,6 +204,14 @@ export default function PortfolioScreen() {
             icon="share-outline"
             onPress={() => Share.share({ message: `Моё портфолио TazaNiyet. Код проверки: ${code}` })}
             style={{ alignSelf: "stretch", marginTop: space.x4 }}
+          />
+          <Button
+            label="Скачать PDF"
+            icon="document-text-outline"
+            variant="secondary"
+            onPress={downloadPdf}
+            loading={pdfBusy}
+            style={{ alignSelf: "stretch", marginTop: space.x2 }}
           />
           <Button label="Отозвать код" variant="danger" onPress={revoke} style={{ marginTop: space.x1 }} />
         </Card>

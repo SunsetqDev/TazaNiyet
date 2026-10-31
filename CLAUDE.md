@@ -135,7 +135,22 @@ birth_year, parent_verified, is_moderator), `tasks` (emoji, title, description, 
 Данные вузов — только проверенные (источник + `checked_at`).
 
 RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_safety_info`, `update_appearance`,
-`review_submission`, `penalize_submission`, `confirm_parent_consent`, `delete_my_account`.
+`review_submission`, `penalize_submission`, `confirm_parent_consent`, `delete_my_account`, `check_nickname(p_nick)`.
+
+### Профиль, фильтр ников, PDF-портфолио (31.10.2026)
+
+- **Ник**: `check_nickname(p_nick)` → null / текст ошибки (запрещённое слово, «уже занят»); экран `edit-profile` проверяет
+  через 500 мс после ввода и показывает красную ошибку, «Сохранить» недоступна. Внутренняя `nick_problem(p_nick)` ловит
+  маскировку (латиница-двойники, цифры/символы, транслит, казахские буквы, повторы). Слова — таблица `banned_words`
+  (закрыта от клиента). `update_appearance(p_nickname, p_emoji, p_color, p_avatar_path default null)` тоже проверяет ник.
+- **Фото-аватар**: `profiles.avatar_path`, закрытый бакет `avatars` (`<uid>/…`, видит только владелец — пользователи дети);
+  `p_avatar_path`: null — не менять, '' — убрать, путь — новое фото. Ссылка — `src/lib/avatar.ts` (`avatarUrl`).
+- **PDF-портфолио** — функция Supabase `portfolio-pdf` (`supabase/functions/portfolio-pdf`, Deno, pdf-lib + fontkit + qrcode;
+  шрифты Inter/Literata с jsDelivr). Собирается на сервере → закрытый бакет `portfolios` (`<uid>/portfolio.pdf`) →
+  ссылка на 10 минут → приложение открывает её (`Linking`). Новых нативных библиотек нет — обновляется без APK.
+  В PDF — **полное имя** (разрешение владельца), очки, ранг, задания по месяцам, QR и код проверки. В приложении
+  `get_portfolio` по-прежнему показывает только первое имя. Inter встраивается без subset (иначе пропадают буквы).
+  Деплой — Supabase MCP `deploy_edge_function` (файлы index.ts + pdf.ts). Папка исключена из `tsconfig.json`.
 
 ### Эко-система «сообщить → задание на карте → уборка» (готова 30.10.2026, все 6 этапов)
 
@@ -193,6 +208,8 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
   совместимо ли обновление с установленным APK. Изменения только в JS/экранах → `npx eas-cli update --channel preview
   --environment preview --message "…"`; новые нативные библиотеки / разрешения / иконка → новый APK
   (`npx eas-cli build -p android --profile preview`). APK подписывается ключом EAS — ставится поверх старого.
+  **Владелец не любит неожиданные пересборки APK**: до начала работы прямо говорить, нужен ли новый APK. Если задачу
+  можно сделать без нативных изменений (например, на сервере Supabase) — так и делать.
 
 Безопасность держится на RLS и RPC в Supabase. При изменении запросов не ломать имена таблиц, колонок,
 RPC и их параметров — это сломает приложение у всех пользователей. Изменения схемы БД — только с явного согласия.
