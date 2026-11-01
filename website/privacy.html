@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Политика конфиденциальности — TazaNiyet</title>
+  <meta name="description" content="Какие данные собирает приложение TazaNiyet, зачем и кто их видит." />
+  <meta name="theme-color" content="#0E2A1E" />
+  <link rel="icon" href="assets/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Literata:opsz,wght@7..72,600&display=swap&subset=cyrillic" rel="stylesheet" />
+  <style>
+    :root { --night: #0e2a1e; --forest: #153d2c; --lime: #c9f36a; --cream: #f6f4ec; --ink: #252a27; --muted: #6e746e; --line: #e3e0d3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--cream); color: var(--ink); font: 400 17px/1.65 "Inter", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    header { background: linear-gradient(180deg, #08201a, var(--forest)); color: var(--cream); padding: 22px 0 64px; position: relative; overflow: hidden; }
+    header svg.hills { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 50px; }
+    .wrap { width: min(780px, 100% - 32px); margin-inline: auto; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { font: 600 22px/1 "Literata", Georgia, serif; text-decoration: none; }
+    .back { font-size: 15px; color: rgba(246, 244, 236, .8); text-decoration: none; }
+    .back:hover { color: var(--lime); }
+    h1 { font: 600 clamp(32px, 6vw, 46px)/1.15 "Literata", Georgia, serif; margin: 48px 0 0; }
+    main { padding: 32px 0 80px; }
+    section { padding: 22px 0; border-top: 1px solid var(--line); }
+    section:first-child { border-top: 0; }
+    h2 { font: 600 21px/1.3 "Literata", Georgia, serif; margin: 0 0 6px; }
+    p { margin: 0; }
+    footer { color: var(--muted); font-size: 14px; padding: 0 0 40px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="top">
+        <a class="brand" href="./">TazaNiyet</a>
+        <a class="back" href="./">← На главную</a>
+      </div>
+      <h1>Политика конфиденциальности</h1>
+    </div>
+    <svg class="hills" viewBox="0 0 1440 50" preserveAspectRatio="none" aria-hidden="true"><path d="M0 50 C240 8 480 34 720 20 C960 6 1200 30 1440 12 L1440 50Z" fill="#F6F4EC" /></svg>
+  </header>
+  <!-- Текст совпадает с экраном «Политика конфиденциальности» в приложении (src/app/privacy.tsx) -->
+  <main class="wrap">
+    <section><h2>Какие данные мы собираем</h2><p>Имя, почту, год рождения, область и название населённого пункта, фотографии выполненных заданий, очки TZ. Для пользователей до 14 лет также имя и контакт родителя.</p></section>
+    <section><h2>Зачем</h2><p>Чтобы проверять задания, начислять очки TZ, показывать задания рядом с вами и создавать портфолио волонтёрской активности.</p></section>
+    <section><h2>Кто видит данные</h2><p>Фотографии заданий видят только вы и проверяющие. В рейтинге показывается только имя без фамилии. Пользователи до 14 лет в рейтинге отображаются как «Участник». Портфолио видит только тот, кому вы сами дали код, и там нет фотографий.</p></section>
+    <section><h2>Дети</h2><p>Для пользователей до 14 лет нужно согласие родителей или законных представителей. Без подтверждённого согласия отправка заданий недоступна.</p></section>
+    <section><h2>Безопасность фото</h2><p>Не снимайте лица людей, особенно детей, и не фотографируйте документы. Снимайте только место и результат работы.</p></section>
+    <section><h2>Хранение и удаление</h2><p>Вы можете удалить аккаунт в разделе «Настройки». Будут удалены профиль, заявки и фотографии. Мы не продаём и не передаём ваши данные рекламодателям.</p></section>
+    <section><h2>Контакты</h2><p>По вопросам данных пишите: <a href="mailto:Rusuafflex@gmail.com">Rusuafflex@gmail.com</a></p></section>
+  </main>
+  <footer class="wrap">© 2026 TazaNiyet</footer>
+</body>
+</html>
