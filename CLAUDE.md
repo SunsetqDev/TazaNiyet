@@ -214,6 +214,16 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
 Безопасность держится на RLS и RPC в Supabase. При изменении запросов не ломать имена таблиц, колонок,
 RPC и их параметров — это сломает приложение у всех пользователей. Изменения схемы БД — только с явного согласия.
 
+### Сайт (01.11.2026)
+
+- Папка `website/` — статичный лендинг (index.html + privacy.html + assets), без сборки. Опубликован на GitHub Pages:
+  **https://sunsetqdev.github.io/TazaNiyet/** (ветка `gh-pages` = содержимое `website/`). Предпросмотр — `.claude/launch.json` → «website».
+- Обновить сайт: коммит в `website/` → `git subtree split --prefix website -b gh-pages-site` → `git push github gh-pages-site:gh-pages`.
+- APK для скачивания — выпуск GitHub (Releases) с файлом **`TazaNiyet.apk`** из EAS Build; кнопки и QR ведут на
+  `…/releases/latest/download/TazaNiyet.apk`, поэтому новая версия = новый выпуск с файлом того же имени (`gh release create`).
+  Ссылки EAS на артефакты временные (истекают) — на сайт их не ставить. Публикация выпусков — только с согласия владельца.
+- `privacy.html` повторяет текст `src/app/privacy.tsx` — менять оба места вместе.
+
 ## 5. Дизайн
 
 ### Бренд: название, иконка, экран загрузки (30.10.2026)
