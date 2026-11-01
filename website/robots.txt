@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sunsetqdev.github.io/TazaNiyet/sitemap.xml
