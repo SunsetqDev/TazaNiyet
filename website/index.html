@@ -547,7 +547,7 @@
           и подтверждённое эко-портфолио для поступления.
         </p>
         <div class="cta intro" style="--d:.9s">
-          <a class="btn btn-lime js-apk" href="#download">
+          <a class="btn btn-lime js-apk" href="https://github.com/SunsetqDev/TazaNiyet/releases/latest/download/TazaNiyet.apk">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14" /></svg>
             Скачать APK для Android
           </a>
@@ -707,7 +707,7 @@
             <li>Нажми «Установить» и открой приложение.</li>
             <li>Зарегистрируйся по почте. Если тебе 14 лет или меньше, понадобится согласие родителей.</li>
           </ol>
-          <a class="btn btn-lime js-apk" href="#" download>
+          <a class="btn btn-lime js-apk" href="https://github.com/SunsetqDev/TazaNiyet/releases/latest/download/TazaNiyet.apk">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14" /></svg>
             Скачать APK · ≈ 110 МБ
           </a>
@@ -795,10 +795,11 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script>
-    // Ссылка на APK — меняется в одном месте при каждой новой сборке
-    const APK_URL = "downloads/TazaNiyet.apk";
-    const APK_ABS = new URL(APK_URL, location.href).href;
-    document.querySelectorAll(".dl .js-apk").forEach((a) => (a.href = APK_URL));
+    // APK из EAS Build лежит в выпусках GitHub. Ссылка «latest» всегда ведёт на файл TazaNiyet.apk
+    // в последнем выпуске — для новой версии достаточно создать новый выпуск с файлом того же имени.
+    const APK_URL = "https://github.com/SunsetqDev/TazaNiyet/releases/latest/download/TazaNiyet.apk";
+    const APK_ABS = APK_URL;
+    document.querySelectorAll(".js-apk").forEach((a) => (a.href = APK_URL));
 
     // QR-код со ссылкой на скачивание
     try {
