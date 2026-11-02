@@ -302,7 +302,7 @@ export default function TasksScreen() {
           {ready ? (
             <PetCard points={points} streak={streak} daysSince={daysSince} approved={done} pending={pending} />
           ) : (
-            <SkeletonCard height={420} style={{ borderRadius: radius.hero }} />
+            <SkeletonCard height={330} style={{ borderRadius: radius.hero }} />
           )}
         </Animated.View>
 
@@ -421,22 +421,20 @@ export default function TasksScreen() {
           )}
 
           {!loading && !error && shown.length > 0 && (
-            <Animated.View key={cat} entering={FadeIn.duration(200)} style={{ marginTop: space.x2 }}>
-              {shown.map((t, i) => (
-                <ListRow
-                  key={t.id}
-                  first={i === 0}
-                  title={t.title}
-                  subtitle={catLabel(t.category)}
-                  onPress={() => open(t)}
-                  leading={
-                    <RowIcon tint={tint(t.category)}>
-                      <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
-                    </RowIcon>
-                  }
-                  trailing={<AppText style={s.rowPts}>+{t.points}</AppText>}
-                />
-              ))}
+            <Animated.View key={cat} entering={FadeIn.duration(200)}>
+              {/* минималистичный список: эмодзи без плашки, название и очки */}
+              <Card style={s.allList}>
+                {shown.map((t, i) => (
+                  <ListRow
+                    key={t.id}
+                    first={i === 0}
+                    title={t.title}
+                    onPress={() => open(t)}
+                    leading={<Text style={s.allEmoji}>{t.emoji}</Text>}
+                    trailing={<AppText style={s.allPts}>+{t.points}</AppText>}
+                  />
+                ))}
+              </Card>
             </Animated.View>
           )}
         </Animated.View>
@@ -515,6 +513,9 @@ const s = StyleSheet.create({
   dayBtn: { minHeight: 44, paddingHorizontal: space.x4 },
   chips: { marginHorizontal: -space.gutter, flexGrow: 0 },
   rowPts: { fontFamily: font.bold, fontSize: 14, color: color.forest },
+  allList: { marginTop: space.x3, paddingVertical: 0 },
+  allEmoji: { fontSize: 20, width: 28, textAlign: "center" },
+  allPts: { fontFamily: font.semibold, fontSize: 13, color: color.muted },
   impact: { marginTop: space.x6 },
   impactRow: { flexDirection: "row", marginTop: space.x3 },
   impactNum: { fontFamily: font.display, fontSize: 30, lineHeight: 36, color: color.ink },
