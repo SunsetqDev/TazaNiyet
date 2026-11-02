@@ -13,7 +13,7 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
     <View style={{ ...BOX, alignItems: "center", justifyContent: "center" }}>
       {focused ? (
-        <IconBlob size={36}>
+        <IconBlob size={36} tint={color.lime}>
           <Icon name={name} size={22} color={color.forest} />
         </IconBlob>
       ) : (

@@ -1,7 +1,8 @@
 import { Icon, IconBlob } from "../components/icon";
+import { TaskArt } from "../components/task-art";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
@@ -48,11 +49,12 @@ function PhotoSlot({ label, photo, onPress, disabled }: { label: string; photo: 
 }
 
 export default function TaskScreen() {
-  const { id, title, points, emoji, description } = useLocalSearchParams<{
+  const { id, title, points, emoji, category, description } = useLocalSearchParams<{
     id: string;
     title: string;
     points: string;
     emoji: string;
+    category?: string;
     description: string;
   }>();
   const router = useRouter();
@@ -123,7 +125,7 @@ export default function TaskScreen() {
 
       <View style={s.head}>
         <IconBlob size={72}>
-          <Text style={{ fontSize: 36 }}>{emoji}</Text>
+          <TaskArt category={category} emoji={emoji} size={48} />
         </IconBlob>
         <View style={s.ptsPill}>
           <AppText style={s.ptsText}>+{points} TZ</AppText>

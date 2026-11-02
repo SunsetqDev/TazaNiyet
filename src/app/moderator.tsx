@@ -1,7 +1,8 @@
 import { Icon } from "../components/icon";
+import { TaskArt } from "../components/task-art";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { AccountsReview } from "../components/moderation/accounts-review";
 import { MessageReports } from "../components/moderation/message-reports";
 import { ReportsReview } from "../components/moderation/reports-review";
@@ -31,7 +32,7 @@ const REASONS = [
 type Item = {
   id: number;
   created_at: string;
-  tasks: { emoji: string; title: string; points: number } | null;
+  tasks: { emoji: string; title: string; points: number; category: string | null } | null;
   beforeUrl?: string;
   afterUrl?: string;
 };
@@ -59,7 +60,7 @@ export default function ModeratorScreen() {
     setLoading(true);
     const { data, error } = await supabase
       .from("submissions")
-      .select("id, before_path, after_path, created_at, tasks(emoji, title, points)")
+      .select("id, before_path, after_path, created_at, tasks(emoji, title, points, category)")
       .eq("status", "pending")
       .order("created_at", { ascending: true });
     if (error) {
@@ -202,7 +203,7 @@ export default function ModeratorScreen() {
             <Card key={it.id} style={s.card}>
               <View style={s.head}>
                 <RowIcon>
-                  <Text style={{ fontSize: 20 }}>{it.tasks?.emoji}</Text>
+                  <TaskArt category={it.tasks?.category} emoji={it.tasks?.emoji} size={28} />
                 </RowIcon>
                 <View style={{ flex: 1 }}>
                   <AppText variant="bodyStrong">{it.tasks?.title}</AppText>

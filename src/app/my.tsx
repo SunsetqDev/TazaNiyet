@@ -1,7 +1,8 @@
 import { Icon } from "../components/icon";
+import { TaskArt } from "../components/task-art";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { RefreshControl, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, StyleSheet, View } from "react-native";
 import { AppText } from "../components/ui/app-text";
 import { BackButton } from "../components/ui/back-button";
 import { EmptyState, ErrorState } from "../components/ui/empty-state";
@@ -20,7 +21,7 @@ type Row = {
   status: string;
   created_at: string;
   reject_reason: string | null;
-  tasks: { emoji: string; title: string; points: number } | null;
+  tasks: { emoji: string; title: string; points: number; category: string | null } | null;
 };
 
 /** Уборка места с карты (RPC get_my_spot_tasks). */
@@ -67,7 +68,7 @@ export default function MyScreen() {
 
     const { data, error } = await supabase
       .from("submissions")
-      .select("id, status, created_at, reject_reason, tasks(emoji, title, points)")
+      .select("id, status, created_at, reject_reason, tasks(emoji, title, points, category)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) setError(error.message);
@@ -164,7 +165,7 @@ export default function MyScreen() {
           <View key={r.id} style={s.item}>
             <View style={s.itemTop}>
               <RowIcon>
-                <Text style={{ fontSize: 20 }}>{r.tasks?.emoji}</Text>
+                <TaskArt category={r.tasks?.category} emoji={r.tasks?.emoji} size={28} />
               </RowIcon>
               <View style={{ flex: 1, gap: 4 }}>
                 <AppText variant="bodyStrong">{r.tasks?.title ?? "Задание"}</AppText>

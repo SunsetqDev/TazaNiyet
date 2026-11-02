@@ -19,7 +19,7 @@ export function EmptyState({ icon, title, text, action, onAction, tone = "neutra
   return (
     <View style={s.box}>
       <View style={{ marginBottom: space.x2 }}>
-        <IconBlob tint={err ? color.dangerSoft : color.lime} size={60}>
+        <IconBlob tint={err ? color.dangerSoft : color.sand} size={60}>
           <Icon name={icon} size={28} color={err ? color.danger : color.forest} />
         </IconBlob>
       </View>

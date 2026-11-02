@@ -1,4 +1,5 @@
 import { Icon, IconBlob } from "../../components/icon";
+import { TaskArt } from "../../components/task-art";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -244,7 +245,7 @@ export default function TasksScreen() {
   const open = (t: Task) =>
     router.push({
       pathname: "/task",
-      params: { id: String(t.id), title: t.title, points: String(t.points), emoji: t.emoji, description: t.description },
+      params: { id: String(t.id), title: t.title, points: String(t.points), emoji: t.emoji, category: t.category ?? "", description: t.description },
     });
 
   const dayIndex = Math.floor(Date.now() / 86400000);
@@ -385,7 +386,7 @@ export default function TasksScreen() {
               <Card onPress={() => open(taskOfDay)}>
                 <View style={s.dayTop}>
                   <IconBlob size={56} tint={tint(taskOfDay.category)}>
-                    <Text style={{ fontSize: 28 }}>{taskOfDay.emoji}</Text>
+                    <TaskArt category={taskOfDay.category} emoji={taskOfDay.emoji} size={36} />
                   </IconBlob>
                   <View style={{ flex: 1 }}>
                     {catLabel(taskOfDay.category) ? <AppText variant="overline">{catLabel(taskOfDay.category)}</AppText> : null}
@@ -452,7 +453,7 @@ export default function TasksScreen() {
                     first={i === 0}
                     title={t.title}
                     onPress={() => open(t)}
-                    leading={<Text style={s.allEmoji}>{t.emoji}</Text>}
+                    leading={<TaskArt category={t.category} emoji={t.emoji} size={30} />}
                     trailing={<AppText style={s.allPts}>+{t.points}</AppText>}
                   />
                 ))}
@@ -559,7 +560,6 @@ const s = StyleSheet.create({
   },
   chatBadgeText: { fontFamily: font.bold, fontSize: 10, lineHeight: 12, color: color.surface },
   allList: { marginTop: space.x3, paddingVertical: 0 },
-  allEmoji: { fontSize: 20, width: 28, textAlign: "center" },
   allPts: { fontFamily: font.semibold, fontSize: 13, color: color.muted },
   impact: { marginTop: space.x6 },
   impactRow: { flexDirection: "row", marginTop: space.x3 },

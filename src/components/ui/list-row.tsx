@@ -51,9 +51,9 @@ export function ListRow({ title, subtitle, leading, trailing, onPress, first = f
   );
 }
 
-/** Иконка или эмодзи слева в строке — на фирменной капле-листке 40×40 (бледный лайм заменяется ярким). */
-export function RowIcon({ children, tint = color.lime }: { children: ReactNode; tint?: string }) {
-  return <IconBlob tint={tint === color.limeSoft ? color.lime : tint}>{children}</IconBlob>;
+/** Иконка или рисунок слева в строке — на капле-листке 40×40 (бледный лайм заменяется песочным: иконки сами лаймовые). */
+export function RowIcon({ children, tint = color.sand }: { children: ReactNode; tint?: string }) {
+  return <IconBlob tint={tint === color.limeSoft ? color.sand : tint}>{children}</IconBlob>;
 }
 
 const s = StyleSheet.create({
