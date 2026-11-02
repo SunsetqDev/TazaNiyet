@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { AccountsReview } from "../components/moderation/accounts-review";
 import { ReportsReview } from "../components/moderation/reports-review";
 import { ResultsReview } from "../components/moderation/results-review";
 import { Shot } from "../components/moderation/shot";
@@ -34,11 +35,12 @@ type Item = {
   afterUrl?: string;
 };
 
-// вкладки модерации: обычные задания, заявки о загрязнении, результаты уборки мест с карты
+// вкладки модерации: обычные задания, заявки о загрязнении, результаты уборки мест с карты, аккаунты на удаление
 const TABS = [
   { k: "tasks", label: "Задания" },
   { k: "reports", label: "Заявки" },
   { k: "results", label: "Уборка" },
+  { k: "accounts", label: "Аккаунты" },
 ] as const;
 
 export default function ModeratorScreen() {
@@ -162,6 +164,7 @@ export default function ModeratorScreen() {
 
       {tab === "reports" && <ReportsReview />}
       {tab === "results" && <ResultsReview />}
+      {tab === "accounts" && <AccountsReview />}
 
       {tab === "tasks" && (
       <>
@@ -278,7 +281,7 @@ export default function ModeratorScreen() {
 }
 
 const s = StyleSheet.create({
-  tabs: { flexDirection: "row", marginTop: space.x4 },
+  tabs: { flexDirection: "row", flexWrap: "wrap", rowGap: space.x2, marginTop: space.x4 },
   card: { marginBottom: space.x4 },
   head: { flexDirection: "row", alignItems: "flex-start", gap: space.x3 },
   pts: { fontFamily: font.bold, fontSize: 14, color: color.forest },

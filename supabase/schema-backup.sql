@@ -1,4 +1,4 @@
--- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-10-31, после фильтра ников, фото-аватаров и PDF-портфолио).
+-- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-11-02, после модерации аккаунтов).
 -- Таблицы, индексы, функции (RPC), права, политики RLS, триггеры, бакеты Storage
 -- и справочные данные (повседневные задания, вузы).
 -- Личных данных пользователей (профили, заявки, фото) здесь НЕТ — они хранятся только в Supabase.
@@ -26,6 +26,7 @@ create table if not exists public.profiles (
   avatar_emoji text,
   avatar_color text,
   avatar_path text,
+  last_active_at timestamp with time zone default now() not null,
   constraint profiles_pkey PRIMARY KEY (id),
   constraint profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
@@ -164,8 +165,38 @@ create table if not exists public.banned_words (
 );
 alter table public.banned_words enable row level security;
 
+create table if not exists public.penalties (
+  id bigint generated always as identity not null,
+  user_id uuid not null,
+  moderator_id uuid,
+  source text not null,
+  source_id bigint,
+  points integer default 0 not null,
+  created_at timestamp with time zone default now() not null,
+  constraint penalties_pkey PRIMARY KEY (id),
+  constraint penalties_moderator_id_fkey FOREIGN KEY (moderator_id) REFERENCES auth.users(id) ON DELETE SET NULL,
+  constraint penalties_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+  constraint penalties_source_check CHECK ((source = ANY (ARRAY['submission'::text, 'report'::text, 'spot_result'::text])))
+);
+alter table public.penalties enable row level security;
+
+create table if not exists public.account_deletions (
+  id bigint generated always as identity not null,
+  moderator_id uuid,
+  kind text not null,
+  reason text,
+  penalties integer,
+  last_active_at timestamp with time zone,
+  deleted_at timestamp with time zone default now() not null,
+  constraint account_deletions_pkey PRIMARY KEY (id),
+  constraint account_deletions_moderator_id_fkey FOREIGN KEY (moderator_id) REFERENCES auth.users(id) ON DELETE SET NULL,
+  constraint account_deletions_kind_check CHECK ((kind = ANY (ARRAY['fraud'::text, 'inactive'::text])))
+);
+alter table public.account_deletions enable row level security;
+
 -- ===== Индексы =====
 CREATE UNIQUE INDEX one_pending_per_task ON public.submissions USING btree (user_id, task_id) WHERE (status = 'pending'::text);
+CREATE INDEX penalties_user_time ON public.penalties USING btree (user_id, created_at DESC);
 CREATE UNIQUE INDEX profiles_nickname_unique ON public.profiles USING btree (lower(nickname)) WHERE (nickname IS NOT NULL);
 CREATE INDEX reports_author_idx ON public.reports USING btree (author_id, created_at DESC);
 CREATE INDEX reports_status_idx ON public.reports USING btree (status, created_at);
@@ -173,6 +204,23 @@ CREATE INDEX spot_tasks_assignee_idx ON public.spot_tasks USING btree (assignee_
 CREATE INDEX spot_tasks_status_idx ON public.spot_tasks USING btree (status);
 
 -- ===== Функции =====
+CREATE OR REPLACE FUNCTION public.account_deletion_kind(p_uid uuid)
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select case
+    when p.is_moderator then null
+    when (select count(*) from penalties x where x.user_id = p.id
+            and x.created_at > now() - make_interval(days => r.fraud_days)) >= r.fraud_count then 'fraud'
+    when p.last_active_at < now() - make_interval(days => r.inactive_days) then 'inactive'
+  end
+  from profiles p, moderation_rules() r
+  where p.id = p_uid;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.approve_submission(sub_id bigint)
  RETURNS text
  LANGUAGE plpgsql
@@ -215,6 +263,24 @@ begin
   update spot_tasks set status = 'cancelled', last_reject_reason = nullif(trim(p_reason), ''), reviewed_by = auth.uid()
    where id = p_id;
   return 'Задание снято с карты';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.check_account_deletion(p_user_id uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare k text;
+begin
+  if not is_moderator() then return 'Нет доступа'; end if;
+  if p_user_id = auth.uid() then return 'Нельзя удалить свой аккаунт'; end if;
+  if exists (select 1 from profiles where id = p_user_id and is_moderator) then return 'Нельзя удалить модератора'; end if;
+  k := account_deletion_kind(p_user_id);
+  if k is null then return 'Аккаунт не подходит под правила удаления'; end if;
+  return k;
 end;
 $function$
 ;
@@ -385,6 +451,33 @@ AS $function$
     power(radians(lat2 - lat1), 2) +
     power(radians(lng2 - lng1) * cos(radians((lat1 + lat2) / 2)), 2)
   );
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_accounts_for_review()
+ RETURNS TABLE(user_id uuid, display_name text, place text, points integer, penalties integer, last_penalty_at timestamp with time zone, last_active_at timestamp with time zone, kind text)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare r record;
+begin
+  if not is_moderator() then raise exception 'Нет доступа'; end if;
+  select * into r from moderation_rules();
+  return query
+    select p.id,
+           coalesce(nullif(trim(p.nickname), ''), split_part(coalesce(nullif(trim(p.name), ''), 'Участник'), ' ', 1)),
+           coalesce(p.place_name, p.region),
+           p.points,
+           (select count(*)::int from penalties x where x.user_id = p.id
+              and x.created_at > now() - make_interval(days => r.fraud_days)),
+           (select max(x.created_at) from penalties x where x.user_id = p.id),
+           p.last_active_at,
+           account_deletion_kind(p.id)
+      from profiles p
+     where account_deletion_kind(p.id) is not null
+     order by account_deletion_kind(p.id) = 'inactive', p.last_active_at;
+end;
 $function$
 ;
 
@@ -591,6 +684,14 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.moderation_rules()
+ RETURNS TABLE(fraud_count integer, fraud_days integer, inactive_days integer)
+ LANGUAGE sql
+ IMMUTABLE
+ SET search_path TO ''
+AS $function$ select 3, 90, 180 $function$
+;
+
 CREATE OR REPLACE FUNCTION public.nick_problem(p_nick text)
  RETURNS text
  LANGUAGE plpgsql
@@ -649,6 +750,8 @@ begin
   end if;
   update submissions set status = 'rejected' where id = sub_id;
   update profiles set points = greatest(0, points - penalty) where id = s.user_id;
+  insert into penalties (user_id, moderator_id, source, source_id, points)
+  values (s.user_id, auth.uid(), 'submission', sub_id, coalesce(penalty, 0));
   return 'Отклонено, снято ' || penalty || ' TZ';
 end;
 $function$
@@ -724,6 +827,8 @@ begin
     update reports set status = 'rejected', reject_reason = nullif(trim(p_reason), ''), reviewed_by = auth.uid(), reviewed_at = now() where id = r.id;
     if coalesce(p_penalty, 0) > 0 then
       update profiles set points = greatest(0, points - p_penalty) where id = r.author_id;
+      insert into penalties (user_id, moderator_id, source, source_id, points)
+      values (r.author_id, auth.uid(), 'report', r.id, p_penalty);
       return 'Отклонено, снято ' || p_penalty || ' TZ';
     end if;
     return 'Отклонено';
@@ -786,6 +891,8 @@ begin
            reject_count = reject_count + 1, last_reject_reason = null, reviewed_by = auth.uid()
      where id = p_id;
     update profiles set points = greatest(0, points - p_penalty) where id = t.assignee_id;
+    insert into penalties (user_id, moderator_id, source, source_id, points)
+    values (t.assignee_id, auth.uid(), 'spot_result', p_id, p_penalty);
     return 'Отмечено как обман, снято ' || p_penalty || ' TZ; задание снова доступно';
   else
     update spot_tasks set status = 'in_progress', result_photo_path = null, result_submitted_at = null,
@@ -886,6 +993,24 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.touch_activity()
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare uid uuid := auth.uid(); n int;
+begin
+  if uid is null then return 0; end if;
+  update profiles set last_active_at = now()
+   where id = uid and last_active_at < now() - interval '10 minutes';
+  select count(*) into n from penalties
+   where user_id = uid and created_at > now() - make_interval(days => (select fraud_days from moderation_rules()));
+  return n;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.update_appearance(p_nickname text, p_emoji text, p_color text, p_avatar_path text DEFAULT NULL::text)
  RETURNS text
  LANGUAGE plpgsql
@@ -965,11 +1090,16 @@ grant SELECT on public.reports to authenticated;
 revoke all on public.spot_tasks from anon, authenticated;
 grant SELECT on public.spot_tasks to authenticated;
 revoke all on public.banned_words from anon, authenticated;
+revoke all on public.penalties from anon, authenticated;
+revoke all on public.account_deletions from anon, authenticated;
 
 -- ===== Права на функции =====
+revoke all on function account_deletion_kind(uuid) from public, anon, authenticated;
 revoke all on function approve_submission(bigint) from public, anon, authenticated;
 revoke all on function cancel_spot_task(bigint,text) from public, anon, authenticated;
 grant execute on function cancel_spot_task(bigint,text) to authenticated;
+revoke all on function check_account_deletion(uuid) from public, anon, authenticated;
+grant execute on function check_account_deletion(uuid) to authenticated;
 revoke all on function check_can_act(uuid) from public, anon, authenticated;
 revoke all on function check_nickname(text) from public, anon, authenticated;
 grant execute on function check_nickname(text) to authenticated;
@@ -990,6 +1120,8 @@ grant execute on function delete_my_account() to authenticated;
 revoke all on function geo_distance_m(double precision,double precision,double precision,double precision) from public, anon, authenticated;
 grant execute on function geo_distance_m(double precision,double precision,double precision,double precision) to authenticated;
 grant execute on function geo_distance_m(double precision,double precision,double precision,double precision) to anon;
+revoke all on function get_accounts_for_review() from public, anon, authenticated;
+grant execute on function get_accounts_for_review() to authenticated;
 revoke all on function get_community_stats() from public, anon, authenticated;
 grant execute on function get_community_stats() to authenticated;
 revoke all on function get_leaderboard() from public, anon, authenticated;
@@ -1014,6 +1146,7 @@ grant execute on function is_moderator() to authenticated;
 grant execute on function is_moderator() to anon;
 revoke all on function is_visible_task_photo(text) from public, anon, authenticated;
 grant execute on function is_visible_task_photo(text) to authenticated;
+revoke all on function moderation_rules() from public, anon, authenticated;
 revoke all on function nick_problem(text) from public, anon, authenticated;
 revoke all on function penalize_submission(bigint,integer) from public, anon, authenticated;
 grant execute on function penalize_submission(bigint,integer) to authenticated;
@@ -1033,6 +1166,8 @@ revoke all on function submit_report(text,text,text[],double precision,double pr
 grant execute on function submit_report(text,text,text[],double precision,double precision,real,text) to authenticated;
 revoke all on function submit_task_result(bigint,text,double precision,double precision) from public, anon, authenticated;
 grant execute on function submit_task_result(bigint,text,double precision,double precision) to authenticated;
+revoke all on function touch_activity() from public, anon, authenticated;
+grant execute on function touch_activity() to authenticated;
 revoke all on function update_appearance(text,text,text,text) from public, anon, authenticated;
 grant execute on function update_appearance(text,text,text,text) to authenticated;
 

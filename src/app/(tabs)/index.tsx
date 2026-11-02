@@ -97,6 +97,8 @@ export default function TasksScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [needConsent, setNeedConsent] = useState(false);
+  // нарушений («Обман») за 90 дней: после 3 модератор может удалить аккаунт, после 2 — предупреждаем
+  const [penalties, setPenalties] = useState(0);
   const [cat, setCat] = useState("all");
   const [streak, setStreak] = useState(0);
   const [done, setDone] = useState(0);
@@ -158,6 +160,8 @@ export default function TasksScreen() {
         setPlaceType(data.place_type);
         const age = new Date().getFullYear() - data.birth_year;
         setNeedConsent(age <= 14 && !data.parent_verified);
+        // отметка активности (неактивные 6 месяцев аккаунты модератор может удалить)
+        supabase.rpc("touch_activity").then(({ data: n }) => setPenalties(typeof n === "number" ? n : 0));
 
         // approved и pending считаем активностью: баобаб оживает сразу после отправки задания
         const { data: subs } = await supabase
@@ -273,6 +277,22 @@ export default function TasksScreen() {
               </AppText>
               <AppText variant="body" color={color.warn}>
                 Пока проверяющий не подтвердит согласие, отправлять задания нельзя.
+              </AppText>
+            </View>
+          </Animated.View>
+        )}
+
+        {penalties >= 2 && (
+          <Animated.View entering={enter(1)} style={[s.warn, { backgroundColor: color.dangerSoft }]}>
+            <Ionicons name="warning-outline" size={22} color={color.danger} />
+            <View style={{ flex: 1 }}>
+              <AppText variant="bodyStrong" color={color.danger}>
+                {penalties >= 3 ? "Аккаунт могут удалить" : "Последнее предупреждение"}
+              </AppText>
+              <AppText variant="body" color={color.danger}>
+                {penalties >= 3
+                  ? `Нарушений («Обман») за 90 дней: ${penalties}. Модератор может удалить аккаунт вместе с очками и заданиями.`
+                  : "Модератор дважды отметил обман за 90 дней. Ещё одно нарушение — и аккаунт могут удалить вместе с очками."}
               </AppText>
             </View>
           </Animated.View>
