@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../icon";
 import { Image, StyleSheet, View } from "react-native";
 import { color, radius, space } from "../../lib/theme";
 import { AppText } from "../ui/app-text";
@@ -14,7 +14,7 @@ export function Shot({ label, uri }: { label: string; uri?: string | null }) {
         <Image source={{ uri }} style={s.photo} />
       ) : (
         <View style={[s.photo, s.noPhoto]}>
-          <Ionicons name="image-outline" size={24} color={color.faint} />
+          <Icon name="image-outline" size={24} color={color.faint} />
           <AppText variant="caption">Нет фото</AppText>
         </View>
       )}

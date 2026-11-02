@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../icon";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { supabase } from "../../lib/supabase";
@@ -55,7 +55,7 @@ function ReportCard({ r, onDone }: { r: Row; onDone: () => void }) {
     <Card style={s.card}>
       <View style={s.head}>
         <View style={s.icon}>
-          <Ionicons name="flag-outline" size={18} color={color.danger} />
+          <Icon name="flag-outline" size={18} color={color.danger} />
         </View>
         <View style={{ flex: 1 }}>
           <AppText variant="bodyStrong" numberOfLines={1}>

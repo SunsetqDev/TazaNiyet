@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../components/icon";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -157,7 +157,7 @@ export default function ChatScreen() {
         onChangeText={setText}
       />
       <Pressable onPress={send} disabled={!text.trim() || sending} style={[s.send, (!text.trim() || sending) && { opacity: 0.4 }]} hitSlop={6}>
-        {sending ? <ActivityIndicator color={color.lime} size="small" /> : <Ionicons name="arrow-up" size={22} color={color.lime} />}
+        {sending ? <ActivityIndicator color={color.lime} size="small" /> : <Icon name="arrow-up" size={22} color={color.lime} />}
       </Pressable>
     </View>
   );
@@ -173,7 +173,7 @@ export default function ChatScreen() {
         >
           {group ? (
             <View style={s.groupAva}>
-              <Ionicons name="people" size={20} color={color.forest} />
+              <Icon name="people" size={20} color={color.forest} />
             </View>
           ) : (
             <Avatar name={info?.title} emoji={other?.emoji} color={other?.color} size={40} />
@@ -186,7 +186,7 @@ export default function ChatScreen() {
               {info ? subtitle : " "}
             </AppText>
           </View>
-          <Ionicons name="ellipsis-vertical" size={20} color={color.muted} />
+          <Icon name="ellipsis-vertical" size={20} color={color.muted} />
         </Pressable>
       </View>
 

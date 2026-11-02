@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
@@ -121,7 +121,7 @@ export default function ReportScreen() {
       <Screen bottomInset contentStyle={s.doneWrap}>
         <Animated.View entering={FadeInDown.duration(320)} style={s.done}>
           <View style={s.doneIcon}>
-            <Ionicons name="checkmark" size={32} color={color.forest} />
+            <Icon name="checkmark" size={32} color={color.forest} />
           </View>
           <AppText variant="h1" style={{ textAlign: "center" }}>
             Заявка отправлена
@@ -174,25 +174,25 @@ export default function ReportScreen() {
               onPress={() => setPhotos((list) => list.filter((_, j) => j !== i))}
               accessibilityLabel="Убрать фото"
             >
-              <Ionicons name="close" size={16} color={color.onForest} />
+              <Icon name="close" size={16} color={color.onForest} />
             </Pressable>
           </View>
         ))}
         {photos.length < MAX_PHOTOS && (
           <View style={s.addCol}>
             <PressScale onPress={() => addPhoto("camera")} scaleTo={0.96} style={s.addBtn}>
-              <Ionicons name="camera-outline" size={22} color={color.forest} />
+              <Icon name="camera-outline" size={22} color={color.forest} />
               <AppText style={s.addText}>Камера</AppText>
             </PressScale>
             <PressScale onPress={() => addPhoto("gallery")} scaleTo={0.96} style={s.addBtn}>
-              <Ionicons name="images-outline" size={22} color={color.forest} />
+              <Icon name="images-outline" size={22} color={color.forest} />
               <AppText style={s.addText}>Галерея</AppText>
             </PressScale>
           </View>
         )}
       </View>
       <View style={s.note}>
-        <Ionicons name="eye-off-outline" size={14} color={color.muted} />
+        <Icon name="eye-off-outline" size={14} color={color.muted} />
         <AppText variant="caption" style={{ flex: 1 }}>
           Снимайте только место — без лиц людей, номеров машин и документов.
         </AppText>
@@ -204,7 +204,7 @@ export default function ReportScreen() {
           const on = category === c.k;
           return (
             <PressScale key={c.k} onPress={() => setCategory(c.k)} scaleTo={0.96} style={[s.cat, on && s.catOn]}>
-              <Ionicons name={c.icon} size={20} color={on ? color.lime : color.forest} />
+              <Icon name={c.icon} size={20} color={on ? color.lime : color.forest} />
               <AppText style={s.catText} color={on ? color.onForest : color.ink} numberOfLines={2}>
                 {c.label}
               </AppText>
@@ -245,7 +245,7 @@ export default function ReportScreen() {
             onMarkerDrag={(p) => moveTo(p.lat, p.lng)}
           />
           <View style={s.locInfo}>
-            <Ionicons name="location" size={16} color={color.forest} />
+            <Icon name="location" size={16} color={color.forest} />
             <AppText variant="body" style={{ flex: 1 }}>
               {coords ? address || `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "Нажмите на карту, чтобы поставить метку"}
             </AppText>
@@ -257,7 +257,7 @@ export default function ReportScreen() {
           <Button label="Обновить по GPS" icon="locate-outline" variant="ghost" onPress={locate} loading={locating} style={{ alignSelf: "flex-start", paddingHorizontal: 0 }} />
           {nearby > 0 && (
             <View style={s.warn}>
-              <Ionicons name="alert-circle-outline" size={18} color={color.warn} />
+              <Icon name="alert-circle-outline" size={18} color={color.warn} />
               <AppText variant="body" color={color.warn} style={{ flex: 1 }}>
                 Рядом уже есть заявка ({nearby}). Если это то же место, отправлять повторно не нужно.
               </AppText>

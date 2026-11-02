@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../components/icon";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -120,7 +120,7 @@ export default function MapScreen() {
             </AppText>
           </View>
           <PressScale onPress={load} scaleTo={0.9} style={s.iconBtn}>
-            <Ionicons name="refresh" size={20} color={color.ink} />
+            <Icon name="refresh" size={20} color={color.ink} />
           </PressScale>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.gutter }} style={{ marginTop: space.x2 }}>
@@ -134,7 +134,7 @@ export default function MapScreen() {
       {/* кнопки справа */}
       <View style={[s.side, { bottom: selected ? 250 : space.x6 + 60 }]}>
         <PressScale onPress={locate} scaleTo={0.9} style={s.fab}>
-          <Ionicons name="locate" size={22} color={color.forest} />
+          <Icon name="locate" size={22} color={color.forest} />
         </PressScale>
       </View>
 
@@ -173,7 +173,7 @@ export default function MapScreen() {
       {!loading && !error && !selected && shown.length > 0 && locAllowed === false && (
         <View style={s.bottom}>
           <PressScale onPress={() => findMe(true)} scaleTo={0.98} style={s.hint}>
-            <Ionicons name="navigate-outline" size={18} color={color.forest} />
+            <Icon name="navigate-outline" size={18} color={color.forest} />
             <AppText variant="body" style={{ flex: 1 }}>
               Разрешите геолокацию, чтобы видеть себя на карте и расстояние до мест
             </AppText>
@@ -189,7 +189,7 @@ export default function MapScreen() {
                 <Image source={{ uri: thumb }} style={s.thumb} />
               ) : (
                 <View style={[s.thumb, s.noThumb]}>
-                  <Ionicons name={reportCategory(selected.category).icon} size={24} color={color.muted} />
+                  <Icon name={reportCategory(selected.category).icon} size={24} color={color.muted} />
                 </View>
               )}
               <View style={{ flex: 1, gap: 4 }}>
@@ -204,7 +204,7 @@ export default function MapScreen() {
                 </View>
               </View>
               <PressScale onPress={() => setSelected(null)} scaleTo={0.9} style={s.close}>
-                <Ionicons name="close" size={18} color={color.muted} />
+                <Icon name="close" size={18} color={color.muted} />
               </PressScale>
             </View>
             {selected.status !== "available" && !selected.is_mine && (

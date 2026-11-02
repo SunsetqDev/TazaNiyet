@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
@@ -247,7 +247,7 @@ export default function ModeratorScreen() {
                       <AppText variant="body" style={{ flex: 1 }}>
                         {r}
                       </AppText>
-                      <Ionicons name="chevron-forward" size={16} color={color.faint} />
+                      <Icon name="chevron-forward" size={16} color={color.faint} />
                     </Pressable>
                   ))}
                   <TextField

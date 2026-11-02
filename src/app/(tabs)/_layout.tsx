@@ -1,28 +1,24 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, IconBlob, type IconName } from "../../components/icon";
 import { Tabs, useRouter } from "expo-router";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PressScale } from "../../components/anim";
-import { color, font, radius } from "../../lib/theme";
+import { color, font } from "../../lib/theme";
 
-type IconName = React.ComponentProps<typeof Ionicons>["name"];
+// коробка иконки; библиотека по умолчанию даёт 24×24 — расширяем через tabBarIconStyle
+const BOX = { width: 40, height: 34 };
 
-// размер «пилюли»; библиотека по умолчанию даёт иконке коробку 24×24 — расширяем её через tabBarIconStyle
-const PILL = { width: 56, height: 32 };
-
-// активная вкладка — иконка на лаймовой «пилюле»
+// тёмная панель: активная вкладка — тёмная иконка на лаймовой капле-листке
 function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
   return (
-    <View
-      style={{
-        ...PILL,
-        borderRadius: radius.pill,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: focused ? color.lime : "transparent",
-      }}
-    >
-      <Ionicons name={name} size={22} color={focused ? color.forest : color.muted} />
+    <View style={{ ...BOX, alignItems: "center", justifyContent: "center" }}>
+      {focused ? (
+        <IconBlob size={36}>
+          <Icon name={name} size={22} color={color.forest} />
+        </IconBlob>
+      ) : (
+        <Icon name={name} size={22} color={color.onForestMuted} />
+      )}
     </View>
   );
 }
@@ -40,14 +36,14 @@ function ReportButton() {
           height: 56,
           borderRadius: 28,
           marginTop: -18,
-          backgroundColor: color.forest,
+          backgroundColor: color.lime,
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 4,
-          borderColor: color.cream,
+          borderColor: color.forest,
         }}
       >
-        <Ionicons name="add" size={30} color={color.lime} />
+        <Icon name="add" size={30} color={color.forest} />
       </PressScale>
     </View>
   );
@@ -69,19 +65,18 @@ export default function TabsLayout() {
         headerShown: false,
         // на Android иначе панель поднимается над клавиатурой (поиск во «Вузах»)
         tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: color.forest,
-        tabBarInactiveTintColor: color.muted,
-        tabBarIconStyle: PILL,
+        tabBarActiveTintColor: color.lime,
+        tabBarInactiveTintColor: color.onForestMuted,
+        tabBarIconStyle: BOX,
         tabBarStyle: {
-          backgroundColor: color.surface,
-          borderTopColor: color.line,
-          borderTopWidth: 1,
+          backgroundColor: color.forest,
+          borderTopWidth: 0,
           height: 68 + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom + 8,
           elevation: 0,
         },
-        tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11, marginTop: 4 },
+        tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11, marginTop: 2 },
       }}
     >
       <Tabs.Screen name="index" options={tab("Задания", "leaf-outline", "leaf")} />

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../icon";
 import { useRouter } from "expo-router";
 import { StyleSheet } from "react-native";
 import { color, space } from "../../lib/theme";
@@ -14,7 +14,7 @@ export function BackButton({ onPress }: { onPress?: () => void }) {
   };
   return (
     <PressScale onPress={back} scaleTo={0.92} style={s.btn}>
-      <Ionicons name="arrow-back" size={22} color={color.ink} />
+      <Icon name="arrow-back" size={22} color={color.ink} />
     </PressScale>
   );
 }

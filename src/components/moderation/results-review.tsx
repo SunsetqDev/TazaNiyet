@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../icon";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { DIFFICULTY } from "../../lib/spot-tasks";
@@ -80,7 +80,7 @@ function ResultCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
       </View>
 
       <View style={s.facts}>
-        <Ionicons name="navigate-outline" size={16} color={color.muted} />
+        <Icon name="navigate-outline" size={16} color={color.muted} />
         <AppText variant="caption" style={{ flex: 1 }}>
           Снято в {Math.round(r.result_distance_m ?? 0)} м от точки
           {r.result_submitted_at ? ` · ${new Date(r.result_submitted_at).toLocaleString("ru-RU")}` : ""}
@@ -106,7 +106,7 @@ function ResultCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
               <AppText variant="body" style={{ flex: 1 }}>
                 {x}
               </AppText>
-              <Ionicons name="chevron-forward" size={16} color={color.faint} />
+              <Icon name="chevron-forward" size={16} color={color.faint} />
             </Pressable>
           ))}
           <TextField

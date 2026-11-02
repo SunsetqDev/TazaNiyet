@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
@@ -52,7 +52,7 @@ export default function SafetyScreen() {
   return (
     <Screen bottomInset footer={<Button label="Продолжить" onPress={save} loading={saving} />}>
       <View style={s.icon}>
-        <Ionicons name="shield-checkmark-outline" size={28} color={color.forest} />
+        <Icon name="shield-checkmark-outline" size={28} color={color.forest} />
       </View>
       <AppText variant="h1">Безопасность</AppText>
       <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x6 }}>
@@ -82,7 +82,7 @@ export default function SafetyScreen() {
       )}
 
       <Pressable style={s.agreeRow} onPress={() => setAgree(!agree)} hitSlop={6}>
-        <View style={[s.check, agree && s.checkOn]}>{agree && <Ionicons name="checkmark" size={18} color={color.lime} />}</View>
+        <View style={[s.check, agree && s.checkOn]}>{agree && <Icon name="checkmark" size={18} color={color.lime} />}</View>
         <AppText variant="body" style={{ flex: 1 }}>
           Я принимаю политику конфиденциальности
         </AppText>

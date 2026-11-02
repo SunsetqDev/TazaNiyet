@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Linking, Share, StyleSheet, Text, View } from "react-native";
@@ -37,7 +37,7 @@ function ResultView({ r }: { r: Result }) {
       <AppText variant="h2">{r.name}</AppText>
       {r.place ? (
         <View style={s.placeRow}>
-          <Ionicons name="location-outline" size={14} color={color.muted} />
+          <Icon name="location-outline" size={14} color={color.muted} />
           <AppText variant="caption">{r.place}</AppText>
         </View>
       ) : null}
@@ -245,7 +245,7 @@ export default function PortfolioScreen() {
       {checked && (
         <>
           <View style={s.ok}>
-            <Ionicons name="checkmark-circle" size={20} color={color.forest} />
+            <Icon name="checkmark-circle" size={20} color={color.forest} />
             <AppText variant="bodyStrong" color={color.forest}>
               Портфолио подтверждено
             </AppText>

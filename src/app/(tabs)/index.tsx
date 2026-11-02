@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, IconBlob } from "../../components/icon";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -259,7 +259,7 @@ export default function TasksScreen() {
         <Animated.View entering={enter(0)} style={s.top}>
           <View style={{ flex: 1 }}>
             <Pressable onPress={() => router.push("/place")} hitSlop={8} style={s.placeRow}>
-              <Ionicons name="location-outline" size={14} color={color.muted} />
+              <Icon name="location-outline" size={14} color={color.muted} />
               {ready ? (
                 <AppText variant="caption" numberOfLines={1} style={{ flexShrink: 1 }}>
                   {placeName || region} · <Text style={s.change}>изменить</Text>
@@ -278,7 +278,7 @@ export default function TasksScreen() {
             </AppText>
           </View>
           <PressScale onPress={() => router.push("/chats")} scaleTo={0.92} style={s.chatBtn}>
-            <Ionicons name="chatbubbles-outline" size={22} color={color.ink} />
+            <Icon name="chatbubbles-outline" size={22} color={color.ink} />
             {unread > 0 && (
               <View style={s.chatBadge}>
                 <AppText style={s.chatBadgeText}>{unread > 99 ? "99+" : unread}</AppText>
@@ -292,7 +292,7 @@ export default function TasksScreen() {
 
         {needConsent && (
           <Animated.View entering={enter(1)} style={s.warn}>
-            <Ionicons name="shield-checkmark-outline" size={22} color={color.warn} />
+            <Icon name="shield-checkmark-outline" size={22} color={color.warn} />
             <View style={{ flex: 1 }}>
               <AppText variant="bodyStrong" color={color.warn}>
                 Ждём согласие родителей
@@ -306,7 +306,7 @@ export default function TasksScreen() {
 
         {penalties >= 2 && (
           <Animated.View entering={enter(1)} style={[s.warn, { backgroundColor: color.dangerSoft }]}>
-            <Ionicons name="warning-outline" size={22} color={color.danger} />
+            <Icon name="warning-outline" size={22} color={color.danger} />
             <View style={{ flex: 1 }}>
               <AppText variant="bodyStrong" color={color.danger}>
                 {penalties >= 3 ? "Аккаунт могут удалить" : "Последнее предупреждение"}
@@ -330,14 +330,14 @@ export default function TasksScreen() {
 
         <Animated.View entering={enter(2)}>
           <PressScale onPress={() => router.push("/report")} scaleTo={0.98} style={s.report}>
-            <View style={s.reportIcon}>
-              <Ionicons name="camera-outline" size={24} color={color.forest} />
-            </View>
+            <IconBlob size={48}>
+              <Icon name="camera-outline" size={26} color={color.forest} />
+            </IconBlob>
             <View style={{ flex: 1 }}>
               <AppText variant="h3">Сообщить о загрязнении</AppText>
               <AppText variant="caption">Фото и место — после проверки станет заданием на карте</AppText>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={color.faint} />
+            <Icon name="chevron-forward" size={20} color={color.faint} />
           </PressScale>
         </Animated.View>
 
@@ -353,7 +353,7 @@ export default function TasksScreen() {
                   onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(myTask.id) } })}
                   leading={
                     <RowIcon tint={color.lime}>
-                      <Ionicons name="walk-outline" size={20} color={color.forest} />
+                      <Icon name="walk-outline" size={20} color={color.forest} />
                     </RowIcon>
                   }
                   trailing={<AppText style={s.rowPts}>+{myTask.points}</AppText>}
@@ -368,7 +368,7 @@ export default function TasksScreen() {
                   onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(t.id) } })}
                   leading={
                     <RowIcon>
-                      <Ionicons name={reportCategory(t.category).icon} size={20} color={color.forest} />
+                      <Icon name={reportCategory(t.category).icon} size={20} color={color.forest} />
                     </RowIcon>
                   }
                   trailing={<AppText style={s.rowPts}>+{t.points}</AppText>}
@@ -384,9 +384,9 @@ export default function TasksScreen() {
             {taskOfDay ? (
               <Card onPress={() => open(taskOfDay)}>
                 <View style={s.dayTop}>
-                  <View style={[s.dayIcon, { backgroundColor: tint(taskOfDay.category) }]}>
+                  <IconBlob size={56} tint={tint(taskOfDay.category)}>
                     <Text style={{ fontSize: 28 }}>{taskOfDay.emoji}</Text>
-                  </View>
+                  </IconBlob>
                   <View style={{ flex: 1 }}>
                     {catLabel(taskOfDay.category) ? <AppText variant="overline">{catLabel(taskOfDay.category)}</AppText> : null}
                     <AppText variant="h3" style={{ marginTop: 2 }}>
@@ -396,7 +396,7 @@ export default function TasksScreen() {
                 </View>
                 <View style={s.dayBottom}>
                   <View style={s.dayHint}>
-                    <Ionicons name="camera-outline" size={16} color={color.muted} />
+                    <Icon name="camera-outline" size={16} color={color.muted} />
                     <AppText variant="caption">фото до и после</AppText>
                   </View>
                   <Button label={`+${taskOfDay.points} TZ · Начать`} onPress={() => open(taskOfDay)} style={s.dayBtn} />
@@ -485,7 +485,7 @@ export default function TasksScreen() {
 
         <View style={s.tip}>
           <View style={s.tipHead}>
-            <Ionicons name="bulb-outline" size={16} color={color.forest} />
+            <Icon name="bulb-outline" size={16} color={color.forest} />
             <AppText variant="overline" color={color.forest}>
               Эко-факт дня
             </AppText>
@@ -527,9 +527,7 @@ const s = StyleSheet.create({
     padding: space.x4,
     marginTop: space.x4,
   },
-  reportIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: color.lime, alignItems: "center", justifyContent: "center" },
   dayTop: { flexDirection: "row", gap: space.x3, alignItems: "flex-start" },
-  dayIcon: { width: 56, height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   dayBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.x2, marginTop: space.x4 },
   dayHint: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 },
   dayBtn: { minHeight: 44, paddingHorizontal: space.x4 },

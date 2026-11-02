@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "../../components/icon";
 import * as Location from "expo-location";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -18,21 +18,21 @@ import { DIFFICULTY, distanceM, formatDistance, openRoute, RESULT_RADIUS_M, time
 import { supabase } from "../../lib/supabase";
 import { color, font, radius, space } from "../../lib/theme";
 
-function Fact({ icon, text }: { icon: React.ComponentProps<typeof Ionicons>["name"]; text: string }) {
+function Fact({ icon, text }: { icon: IconName; text: string }) {
   return (
     <View style={s.fact}>
-      <Ionicons name={icon} size={16} color={color.forest} />
+      <Icon name={icon} size={16} color={color.forest} />
       <AppText style={s.factText}>{text}</AppText>
     </View>
   );
 }
 
-function Note({ icon, text, tone = "neutral" }: { icon: React.ComponentProps<typeof Ionicons>["name"]; text: string; tone?: "neutral" | "warn" | "danger" }) {
+function Note({ icon, text, tone = "neutral" }: { icon: IconName; text: string; tone?: "neutral" | "warn" | "danger" }) {
   const fg = tone === "warn" ? color.warn : tone === "danger" ? color.danger : color.forest;
   const bg = tone === "warn" ? color.warnSoft : tone === "danger" ? color.dangerSoft : color.limeSoft;
   return (
     <View style={[s.note, { backgroundColor: bg }]}>
-      <Ionicons name={icon} size={18} color={fg} />
+      <Icon name={icon} size={18} color={fg} />
       <AppText variant="body" color={tone === "neutral" ? color.ink : fg} style={{ flex: 1 }}>
         {text}
       </AppText>
@@ -257,7 +257,7 @@ export default function SpotTaskScreen() {
         </View>
       ) : (
         <View style={[s.photo, s.noPhoto]}>
-          <Ionicons name={cat.icon} size={40} color={color.muted} />
+          <Icon name={cat.icon} size={40} color={color.muted} />
         </View>
       )}
 
@@ -308,13 +308,13 @@ export default function SpotTaskScreen() {
         />
       </View>
       <View style={s.addr}>
-        <Ionicons name="location-outline" size={16} color={color.muted} />
+        <Icon name="location-outline" size={16} color={color.muted} />
         <AppText variant="body" color={color.muted} style={{ flex: 1 }}>
           {t.address || t.place_name || `${t.lat.toFixed(5)}, ${t.lng.toFixed(5)}`}
         </AppText>
       </View>
       <View style={s.safety}>
-        <Ionicons name="shield-checkmark-outline" size={16} color={color.muted} />
+        <Icon name="shield-checkmark-outline" size={16} color={color.muted} />
         <AppText variant="caption" style={{ flex: 1 }}>
           Убирайте в перчатках, не трогайте стекло, шприцы и химикаты — о таком сообщите взрослым. Не ходите к воде и на
           стройки одни.
@@ -324,7 +324,7 @@ export default function SpotTaskScreen() {
       {t.can_moderate && (
         <View style={s.modBox}>
           <View style={s.modHead}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={color.danger} />
+            <Icon name="shield-checkmark-outline" size={16} color={color.danger} />
             <AppText variant="overline" color={color.danger}>
               Модератор
             </AppText>

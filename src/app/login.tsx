@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
@@ -37,7 +37,7 @@ export default function LoginScreen() {
   return (
     <Screen bottomInset contentStyle={s.content}>
       <View style={s.mark}>
-        <Ionicons name="leaf" size={30} color={color.forest} />
+        <Icon name="leaf" size={30} color={color.forest} />
       </View>
       <AppText variant="display" color={color.forest}>
         TazaNiyet

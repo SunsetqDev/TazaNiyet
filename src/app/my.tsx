@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, StyleSheet, Text, View } from "react-native";
@@ -137,7 +137,7 @@ export default function MyScreen() {
                 onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(t.id) } })}
                 leading={
                   <RowIcon>
-                    <Ionicons name={reportCategory(t.category).icon} size={20} color={color.forest} />
+                    <Icon name={reportCategory(t.category).icon} size={20} color={color.forest} />
                   </RowIcon>
                 }
                 trailing={<StatusPill status={t.status} />}
@@ -176,7 +176,7 @@ export default function MyScreen() {
 
             {r.status === "rejected" && r.reject_reason ? (
               <View style={s.reason}>
-                <Ionicons name="information-circle-outline" size={18} color={color.danger} />
+                <Icon name="information-circle-outline" size={18} color={color.danger} />
                 <View style={{ flex: 1 }}>
                   <AppText variant="bodyStrong" color={color.danger}>
                     Почему отклонено

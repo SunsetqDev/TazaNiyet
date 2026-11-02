@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../components/icon";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image, Linking, StyleSheet, View } from "react-native";
@@ -62,7 +62,7 @@ export default function UniversityScreen() {
             <Image source={{ uri: u.photo_url }} style={s.photo} resizeMode="cover" />
           ) : (
             <View style={[s.photo, s.placeholder]}>
-              <Ionicons name={u.type === "college" ? "business-outline" : "school-outline"} size={48} color={color.muted} />
+              <Icon name={u.type === "college" ? "business-outline" : "school-outline"} size={48} color={color.muted} />
             </View>
           )}
           {u.photo_url && u.photo_credit ? (
@@ -78,7 +78,7 @@ export default function UniversityScreen() {
             {u.name}
           </AppText>
           <View style={s.cityRow}>
-            <Ionicons name="location-outline" size={16} color={color.muted} />
+            <Icon name="location-outline" size={16} color={color.muted} />
             <AppText variant="body" color={color.muted}>
               {u.city}
             </AppText>
@@ -97,7 +97,7 @@ export default function UniversityScreen() {
             <>
               <SectionHeader title="Как поступить" />
               <View style={s.req}>
-                <Ionicons name="school-outline" size={20} color={color.forest} />
+                <Icon name="school-outline" size={20} color={color.forest} />
                 <AppText variant="body" color={color.ink} style={{ flex: 1 }}>
                   {u.requirements}
                 </AppText>
@@ -119,7 +119,7 @@ export default function UniversityScreen() {
           )}
 
           <View style={s.checked}>
-            <Ionicons name="information-circle-outline" size={16} color={color.muted} />
+            <Icon name="information-circle-outline" size={16} color={color.muted} />
             <AppText variant="caption" style={{ flex: 1 }}>
               {u.checked_at
                 ? `Данные проверены: ${new Date(u.checked_at).toLocaleDateString("ru-RU")}. Точные сроки и условия уточняйте на официальном сайте.`

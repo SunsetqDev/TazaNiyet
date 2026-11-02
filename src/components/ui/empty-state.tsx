@@ -1,10 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, IconBlob, type IconName } from "../icon";
 import { StyleSheet, View } from "react-native";
 import { color, radius, space } from "../../lib/theme";
 import { AppText } from "./app-text";
 import { Button } from "./button";
-
-type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 type Props = {
   icon: IconName;
@@ -20,8 +18,10 @@ export function EmptyState({ icon, title, text, action, onAction, tone = "neutra
   const err = tone === "error";
   return (
     <View style={s.box}>
-      <View style={[s.icon, { backgroundColor: err ? color.dangerSoft : color.limeSoft }]}>
-        <Ionicons name={icon} size={26} color={err ? color.danger : color.forest} />
+      <View style={{ marginBottom: space.x2 }}>
+        <IconBlob tint={err ? color.dangerSoft : color.lime} size={60}>
+          <Icon name={icon} size={28} color={err ? color.danger : color.forest} />
+        </IconBlob>
       </View>
       <AppText variant="h3" style={{ textAlign: "center" }}>
         {title}
@@ -54,5 +54,4 @@ export function ErrorState({ onRetry, text }: { onRetry?: () => void; text?: str
 
 const s = StyleSheet.create({
   box: { alignItems: "center", gap: space.x2, paddingVertical: space.x8, paddingHorizontal: space.x4, borderRadius: radius.card },
-  icon: { width: 56, height: 56, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: space.x2 },
 });

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../icon";
 import { useCallback, useEffect, useState } from "react";
 import { OsmMap } from "../osm-map";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -83,14 +83,14 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
             <Image key={p} source={{ uri: urls[p] }} style={s.photo} />
           ) : (
             <View key={p} style={[s.photo, s.noPhoto]}>
-              <Ionicons name="image-outline" size={24} color={color.faint} />
+              <Icon name="image-outline" size={24} color={color.faint} />
             </View>
           )
         )}
       </ScrollView>
 
       <View style={s.meta}>
-        <Ionicons name={cat.icon} size={18} color={color.forest} />
+        <Icon name={cat.icon} size={18} color={color.forest} />
         <AppText variant="bodyStrong" style={{ flex: 1 }}>
           {cat.label}
         </AppText>
@@ -119,7 +119,7 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
       </AppText>
       {r.nearby_tasks > 0 && (
         <View style={s.warn}>
-          <Ionicons name="alert-circle-outline" size={18} color={color.warn} />
+          <Icon name="alert-circle-outline" size={18} color={color.warn} />
           <AppText variant="body" color={color.warn} style={{ flex: 1 }}>
             В радиусе 50 м уже есть активное задание — возможно, это повтор.
           </AppText>
@@ -154,7 +154,7 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
               <AppText variant="body" style={{ flex: 1 }}>
                 {x}
               </AppText>
-              <Ionicons name="chevron-forward" size={16} color={color.faint} />
+              <Icon name="chevron-forward" size={16} color={color.faint} />
             </Pressable>
           ))}
           <TextField

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
@@ -61,7 +61,7 @@ export default function BlockedScreen() {
         <Card style={{ paddingVertical: 0 }}>
           {list.map((b, i) => (
             <View key={b.id} style={[s.row, i > 0 && s.line]}>
-              <Ionicons name="ban-outline" size={20} color={color.muted} />
+              <Icon name="ban-outline" size={20} color={color.muted} />
               <AppText variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>
                 {b.name}
               </AppText>

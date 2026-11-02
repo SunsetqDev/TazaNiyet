@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "../../components/icon";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
@@ -12,8 +12,6 @@ import { Skeleton } from "../../components/ui/skeleton";
 import { avatarUrl } from "../../lib/avatar";
 import { supabase } from "../../lib/supabase";
 import { color as palette, font, radius, space } from "../../lib/theme";
-
-type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 function calcStreak(dates: string[]) {
   const days = new Set(dates.map((d) => new Date(d).toDateString()));
@@ -39,7 +37,7 @@ function Stat({ value, label }: { value: number; label: string }) {
 function MenuIcon({ name, danger }: { name: IconName; danger?: boolean }) {
   return (
     <RowIcon tint={danger ? palette.dangerSoft : palette.limeSoft}>
-      <Ionicons name={name} size={20} color={danger ? palette.danger : palette.forest} />
+      <Icon name={name} size={20} color={danger ? palette.danger : palette.forest} />
     </RowIcon>
   );
 }
@@ -157,7 +155,7 @@ export default function ProfileScreen() {
                 <Text style={s.badgeIcon}>{b.icon}</Text>
               ) : (
                 <View style={s.lock}>
-                  <Ionicons name="lock-closed-outline" size={18} color={palette.faint} />
+                  <Icon name="lock-closed-outline" size={18} color={palette.faint} />
                 </View>
               )}
               <AppText style={s.badgeTitle} color={got ? palette.ink : palette.muted} numberOfLines={2}>

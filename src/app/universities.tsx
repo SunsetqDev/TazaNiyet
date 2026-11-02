@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, TextInput, View } from "react-native";
@@ -21,7 +21,7 @@ function UniCard({ u, onPress }: { u: Uni; onPress: () => void }) {
         <Image source={{ uri: u.photo_url }} style={s.photo} resizeMode="cover" />
       ) : (
         <View style={[s.photo, s.placeholder]}>
-          <Ionicons name={u.type === "college" ? "business-outline" : "school-outline"} size={36} color={color.muted} />
+          <Icon name={u.type === "college" ? "business-outline" : "school-outline"} size={36} color={color.muted} />
         </View>
       )}
       <View style={s.badge}>
@@ -30,7 +30,7 @@ function UniCard({ u, onPress }: { u: Uni; onPress: () => void }) {
       <View style={s.body}>
         <AppText variant="h3">{u.name}</AppText>
         <View style={s.cityRow}>
-          <Ionicons name="location-outline" size={14} color={color.muted} />
+          <Icon name="location-outline" size={14} color={color.muted} />
           <AppText variant="caption">{u.city}</AppText>
         </View>
         {programs.length > 0 && (
@@ -99,7 +99,7 @@ export default function UniversitiesScreen() {
       </AppText>
 
       <View style={s.search}>
-        <Ionicons name="search-outline" size={20} color={color.muted} />
+        <Icon name="search-outline" size={20} color={color.muted} />
         <TextInput
           style={s.searchInput}
           placeholder="Поиск по названию"
@@ -111,7 +111,7 @@ export default function UniversitiesScreen() {
         />
         {query ? (
           <PressScale onPress={() => setQuery("")} scaleTo={0.9}>
-            <Ionicons name="close-circle" size={20} color={color.faint} />
+            <Icon name="close-circle" size={20} color={color.faint} />
           </PressScale>
         ) : null}
       </View>

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
@@ -61,11 +61,11 @@ export default function ChatsScreen() {
 
       <View style={s.actions}>
         <PressScale onPress={() => router.push("/new-chat")} scaleTo={0.97} style={[s.action, s.actionMain]}>
-          <Ionicons name="create-outline" size={20} color={color.lime} />
+          <Icon name="create-outline" size={20} color={color.lime} />
           <AppText style={s.actionMainText}>Новый чат</AppText>
         </PressScale>
         <PressScale onPress={() => router.push({ pathname: "/new-chat", params: { group: "1" } })} scaleTo={0.97} style={s.action}>
-          <Ionicons name="people-outline" size={20} color={color.forest} />
+          <Icon name="people-outline" size={20} color={color.forest} />
           <AppText style={s.actionText}>Создать группу</AppText>
         </PressScale>
       </View>
@@ -89,7 +89,7 @@ export default function ChatsScreen() {
             >
               {c.kind === "group" ? (
                 <View style={s.groupAva}>
-                  <Ionicons name="people" size={22} color={color.forest} />
+                  <Icon name="people" size={22} color={color.forest} />
                 </View>
               ) : (
                 <Avatar name={c.title} emoji={c.avatar_emoji} color={c.avatar_color} size={48} />

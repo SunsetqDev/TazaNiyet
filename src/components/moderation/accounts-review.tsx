@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../icon";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { supabase } from "../../lib/supabase";
@@ -61,7 +61,7 @@ function AccountCard({ r, onDone }: { r: Row; onDone: () => void }) {
     <Card style={s.card}>
       <View style={s.head}>
         <View style={[s.badge, { backgroundColor: fraud ? color.dangerSoft : color.warnSoft }]}>
-          <Ionicons name={fraud ? "warning-outline" : "moon-outline"} size={20} color={fraud ? color.danger : color.warn} />
+          <Icon name={fraud ? "warning-outline" : "moon-outline"} size={20} color={fraud ? color.danger : color.warn} />
         </View>
         <View style={{ flex: 1 }}>
           <AppText variant="h3" numberOfLines={1}>
@@ -111,7 +111,7 @@ export function AccountsReview() {
   return (
     <>
       <View style={s.rules}>
-        <Ionicons name="information-circle-outline" size={18} color={color.muted} />
+        <Icon name="information-circle-outline" size={18} color={color.muted} />
         <AppText variant="caption" style={{ flex: 1 }}>
           Сюда попадают аккаунты с 3 и более «Обманами» за 90 дней или без активности больше 6 месяцев. Модераторов здесь нет.
         </AppText>

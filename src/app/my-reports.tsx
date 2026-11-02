@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Image, RefreshControl, StyleSheet, View } from "react-native";
@@ -112,7 +112,7 @@ export default function MyReportsScreen() {
                   <Image source={{ uri: thumb }} style={s.thumb} />
                 ) : (
                   <View style={[s.thumb, s.noThumb]}>
-                    <Ionicons name={cat.icon} size={22} color={color.muted} />
+                    <Icon name={cat.icon} size={22} color={color.muted} />
                   </View>
                 )}
                 <View style={{ flex: 1, gap: 4 }}>
@@ -128,7 +128,7 @@ export default function MyReportsScreen() {
               </AppText>
               {r.status === "rejected" && r.reject_reason ? (
                 <View style={s.reason}>
-                  <Ionicons name="information-circle-outline" size={18} color={color.danger} />
+                  <Icon name="information-circle-outline" size={18} color={color.danger} />
                   <View style={{ flex: 1 }}>
                     <AppText variant="bodyStrong" color={color.danger}>
                       Почему отклонено

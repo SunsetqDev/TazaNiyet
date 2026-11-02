@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./icon";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { Easing, ZoomIn, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -8,8 +8,6 @@ import { CountUp } from "./anim";
 import { LivingTree } from "./living-tree";
 import { Mascot, MascotMood } from "./mascot";
 import { AppText } from "./ui/app-text";
-
-type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 type Props = {
   points: number;
@@ -36,7 +34,7 @@ function Stat({ icon, value, label }: { icon: IconName; value: number; label: st
   return (
     <View style={s.stat}>
       <View style={s.statTop}>
-        <Ionicons name={icon} size={16} color={color.lime} />
+        <Icon name={icon} size={16} color={color.lime} />
         <CountUp value={value} style={s.statNum} />
       </View>
       <AppText variant="caption" color={color.onForestMuted}>

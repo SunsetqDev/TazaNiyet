@@ -1,8 +1,6 @@
-import type { Ionicons } from "@expo/vector-icons";
+import type { IconName } from "../components/icon";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
-
-type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 /** Категории загрязнения — те же ключи, что в ограничении reports.category в базе. */
 export const REPORT_CATEGORIES: { k: string; label: string; icon: IconName }[] = [

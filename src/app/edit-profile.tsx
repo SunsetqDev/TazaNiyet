@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
@@ -162,11 +162,11 @@ export default function EditProfileScreen() {
       <SectionHeader title="Фото профиля" hint="видно только вам" />
       <View style={s.photoRow}>
         <PressScale onPress={() => choosePhoto("camera")} scaleTo={0.96} style={s.photoBtn}>
-          <Ionicons name="camera-outline" size={22} color={palette.forest} />
+          <Icon name="camera-outline" size={22} color={palette.forest} />
           <AppText style={s.photoBtnText}>Камера</AppText>
         </PressScale>
         <PressScale onPress={() => choosePhoto("gallery")} scaleTo={0.96} style={s.photoBtn}>
-          <Ionicons name="images-outline" size={22} color={palette.forest} />
+          <Icon name="images-outline" size={22} color={palette.forest} />
           <AppText style={s.photoBtnText}>Галерея</AppText>
         </PressScale>
       </View>
@@ -213,7 +213,7 @@ export default function EditProfileScreen() {
         {AVATAR_COLORS.map((c) => (
           <Pressable key={c} onPress={() => setColor(c)} style={[s.colorRing, color === c && s.colorRingOn]}>
             <View style={[s.colorDot, { backgroundColor: c }]}>
-              {color === c && <Ionicons name="checkmark" size={18} color={palette.ink} />}
+              {color === c && <Icon name="checkmark" size={18} color={palette.ink} />}
             </View>
           </Pressable>
         ))}

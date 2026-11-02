@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../../components/icon";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
@@ -108,7 +108,7 @@ export default function ChatInfoScreen() {
       <View style={s.hero}>
         {group ? (
           <View style={s.groupAva}>
-            <Ionicons name="people" size={36} color={color.forest} />
+            <Icon name="people" size={36} color={color.forest} />
           </View>
         ) : (
           <Avatar name={info.title} emoji={other?.emoji} color={other?.color} size={88} />
@@ -153,7 +153,7 @@ export default function ChatInfoScreen() {
                 </View>
                 {admin && !m.is_me ? (
                   <Pressable onPress={() => removeMember(m)} hitSlop={10} disabled={busy}>
-                    <Ionicons name="remove-circle-outline" size={22} color={color.danger} />
+                    <Icon name="remove-circle-outline" size={22} color={color.danger} />
                   </Pressable>
                 ) : null}
               </View>
@@ -173,7 +173,7 @@ export default function ChatInfoScreen() {
       )}
 
       <View style={s.tip}>
-        <Ionicons name="shield-checkmark-outline" size={18} color={color.muted} />
+        <Icon name="shield-checkmark-outline" size={18} color={color.muted} />
         <AppText variant="caption" style={{ flex: 1 }}>
           Если вам пишут грубости, просят фото, адрес или встречу — зажмите сообщение и нажмите «Пожаловаться», и расскажите взрослым.
         </AppText>

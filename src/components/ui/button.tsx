@@ -1,12 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "../icon";
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { color, font, radius, space } from "../../lib/theme";
 import { PressScale } from "../anim";
 import { AppText } from "./app-text";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
-type IconName = React.ComponentProps<typeof Ionicons>["name"];
-
 type Props = {
   label: string;
   onPress?: () => void;
@@ -38,7 +36,7 @@ export function Button({ label, onPress, variant = "primary", icon, loading = fa
         <ActivityIndicator color={fg} />
       ) : (
         <View style={s.row}>
-          {icon ? <Ionicons name={icon} size={20} color={fg} /> : null}
+          {icon ? <Icon name={icon} size={20} color={fg} /> : null}
           <AppText style={{ fontFamily: font.semibold, fontSize: 16 }} color={fg}>
             {label}
           </AppText>

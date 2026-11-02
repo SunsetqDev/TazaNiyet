@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useRouter } from "expo-router";
 import { Alert, StyleSheet, View } from "react-native";
 import { AppText } from "../components/ui/app-text";
@@ -60,7 +60,7 @@ export default function SettingsScreen() {
           subtitle="какие данные мы храним и кто их видит"
           leading={
             <RowIcon>
-              <Ionicons name="lock-closed-outline" size={20} color={color.forest} />
+              <Icon name="lock-closed-outline" size={20} color={color.forest} />
             </RowIcon>
           }
           onPress={() => router.push("/privacy")}
@@ -75,7 +75,7 @@ export default function SettingsScreen() {
           title="Удалить аккаунт и все данные"
           leading={
             <RowIcon tint={color.dangerSoft}>
-              <Ionicons name="trash-outline" size={20} color={color.danger} />
+              <Icon name="trash-outline" size={20} color={color.danger} />
             </RowIcon>
           }
           onPress={deleteAccount}

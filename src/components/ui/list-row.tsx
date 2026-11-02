@@ -1,8 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../icon";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { haptic } from "../../lib/haptics";
 import { color, space } from "../../lib/theme";
+import { IconBlob } from "../icon";
 import { AppText } from "./app-text";
 
 type Props = {
@@ -32,7 +33,7 @@ export function ListRow({ title, subtitle, leading, trailing, onPress, first = f
         ) : null}
       </View>
       {trailing}
-      {onPress ? <Ionicons name="chevron-forward" size={18} color={color.faint} /> : null}
+      {onPress ? <Icon name="chevron-forward" size={18} color={color.faint} /> : null}
     </>
   );
   const style = [s.row, !first && s.line];
@@ -50,13 +51,12 @@ export function ListRow({ title, subtitle, leading, trailing, onPress, first = f
   );
 }
 
-/** Квадрат 40×40 под иконку или эмодзи слева в строке. */
-export function RowIcon({ children, tint = color.limeSoft }: { children: ReactNode; tint?: string }) {
-  return <View style={[s.icon, { backgroundColor: tint }]}>{children}</View>;
+/** Иконка или эмодзи слева в строке — на фирменной капле-листке 40×40 (бледный лайм заменяется ярким). */
+export function RowIcon({ children, tint = color.lime }: { children: ReactNode; tint?: string }) {
+  return <IconBlob tint={tint === color.limeSoft ? color.lime : tint}>{children}</IconBlob>;
 }
 
 const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space.x3, minHeight: 56, paddingVertical: space.x3 },
   line: { borderTopWidth: 1, borderTopColor: color.line },
-  icon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
 });

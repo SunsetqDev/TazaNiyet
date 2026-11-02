@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon } from "../components/icon";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
@@ -104,7 +104,7 @@ export default function NewChatScreen() {
               <AppText style={s.pillText} numberOfLines={1}>
                 {u.name}
               </AppText>
-              <Ionicons name="close" size={14} color={color.forest} />
+              <Icon name="close" size={14} color={color.forest} />
             </Pressable>
           ))}
         </View>
@@ -142,9 +142,9 @@ export default function NewChatScreen() {
                   {u.name}
                 </AppText>
                 {multi ? (
-                  <Ionicons name={on ? "checkmark-circle" : "ellipse-outline"} size={24} color={on ? color.forest : color.faint} />
+                  <Icon name={on ? "checkmark-circle" : "ellipse-outline"} size={24} color={on ? color.forest : color.faint} />
                 ) : (
-                  <Ionicons name="chatbubble-outline" size={20} color={color.forest} />
+                  <Icon name="chatbubble-outline" size={20} color={color.forest} />
                 )}
               </Pressable>
             );

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, IconBlob } from "../components/icon";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
@@ -23,19 +23,21 @@ function PhotoSlot({ label, photo, onPress, disabled }: { label: string; photo: 
         <>
           <Image source={{ uri: photo.uri }} style={s.photo} />
           <View style={s.slotTag}>
-            <Ionicons name="checkmark" size={14} color={color.forest} />
+            <Icon name="checkmark" size={14} color={color.forest} />
             <AppText style={s.slotTagText}>{label}</AppText>
           </View>
           {!disabled && (
             <View style={s.retake}>
-              <Ionicons name="camera-reverse-outline" size={16} color={color.onForest} />
+              <Icon name="camera-reverse-outline" size={16} color={color.onForest} />
             </View>
           )}
         </>
       ) : (
         <>
-          <View style={s.slotIcon}>
-            <Ionicons name="camera-outline" size={24} color={color.forest} />
+          <View style={{ marginBottom: 4 }}>
+            <IconBlob size={48}>
+              <Icon name="camera-outline" size={26} color={color.forest} />
+            </IconBlob>
           </View>
           <AppText variant="bodyStrong">Фото {label.toLowerCase()}</AppText>
           <AppText variant="caption">нажмите, чтобы снять</AppText>
@@ -120,9 +122,9 @@ export default function TaskScreen() {
       <BackButton />
 
       <View style={s.head}>
-        <View style={s.emojiBox}>
+        <IconBlob size={72}>
           <Text style={{ fontSize: 36 }}>{emoji}</Text>
-        </View>
+        </IconBlob>
         <View style={s.ptsPill}>
           <AppText style={s.ptsText}>+{points} TZ</AppText>
         </View>
@@ -142,7 +144,7 @@ export default function TaskScreen() {
         <PhotoSlot label="После" photo={after} onPress={() => snap(setAfter)} disabled={sent} />
       </View>
       <View style={s.note}>
-        <Ionicons name="lock-closed-outline" size={14} color={color.muted} />
+        <Icon name="lock-closed-outline" size={14} color={color.muted} />
         <AppText variant="caption" style={{ flex: 1 }}>
           Фото видят только проверяющие. В портфолио они не показываются.
         </AppText>
@@ -151,7 +153,7 @@ export default function TaskScreen() {
       {sent && (
         <Animated.View entering={FadeInDown.duration(320)} style={s.success}>
           <View style={s.successIcon}>
-            <Ionicons name="checkmark" size={28} color={color.forest} />
+            <Icon name="checkmark" size={28} color={color.forest} />
           </View>
           <AppText variant="h2" style={{ textAlign: "center" }}>
             Отправлено на проверку
@@ -168,7 +170,6 @@ export default function TaskScreen() {
 
 const s = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  emojiBox: { width: 72, height: 72, borderRadius: 22, backgroundColor: color.limeSoft, alignItems: "center", justifyContent: "center" },
   ptsPill: { backgroundColor: color.forest, borderRadius: radius.pill, paddingHorizontal: space.x4, paddingVertical: space.x2 },
   ptsText: { fontFamily: font.bold, fontSize: 15, color: color.lime },
   row: { flexDirection: "row", gap: space.x3 },
@@ -183,7 +184,6 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   slotEmpty: { borderWidth: 1.5, borderColor: color.line, borderStyle: "dashed" },
-  slotIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: color.limeSoft, alignItems: "center", justifyContent: "center", marginBottom: 4 },
   photo: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   slotTag: {
     position: "absolute",
