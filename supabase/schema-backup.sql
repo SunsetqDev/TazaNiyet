@@ -1,4 +1,4 @@
--- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-11-02, после модерации аккаунтов).
+-- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-11-02, после мессенджера).
 -- Таблицы, индексы, функции (RPC), права, политики RLS, триггеры, бакеты Storage
 -- и справочные данные (повседневные задания, вузы).
 -- Личных данных пользователей (профили, заявки, фото) здесь НЕТ — они хранятся только в Supabase.
@@ -176,7 +176,7 @@ create table if not exists public.penalties (
   constraint penalties_pkey PRIMARY KEY (id),
   constraint penalties_moderator_id_fkey FOREIGN KEY (moderator_id) REFERENCES auth.users(id) ON DELETE SET NULL,
   constraint penalties_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
-  constraint penalties_source_check CHECK ((source = ANY (ARRAY['submission'::text, 'report'::text, 'spot_result'::text])))
+  constraint penalties_source_check CHECK ((source = ANY (ARRAY['submission'::text, 'report'::text, 'spot_result'::text, 'message'::text])))
 );
 alter table public.penalties enable row level security;
 
@@ -194,7 +194,82 @@ create table if not exists public.account_deletions (
 );
 alter table public.account_deletions enable row level security;
 
+create table if not exists public.conversations (
+  id bigint generated always as identity not null,
+  kind text not null,
+  title text,
+  direct_key text,
+  created_by uuid,
+  created_at timestamp with time zone default now() not null,
+  last_message_at timestamp with time zone default now() not null,
+  constraint conversations_direct_key_key UNIQUE (direct_key),
+  constraint conversations_pkey PRIMARY KEY (id),
+  constraint conversations_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL,
+  constraint conversations_kind_check CHECK ((kind = ANY (ARRAY['direct'::text, 'group'::text]))),
+  constraint conversations_title_check CHECK (((title IS NULL) OR (char_length(title) <= 60)))
+);
+alter table public.conversations enable row level security;
+
+create table if not exists public.conversation_members (
+  conversation_id bigint not null,
+  user_id uuid not null,
+  role text default 'member'::text not null,
+  joined_at timestamp with time zone default now() not null,
+  last_read_at timestamp with time zone default now() not null,
+  constraint conversation_members_pkey PRIMARY KEY (conversation_id, user_id),
+  constraint conversation_members_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  constraint conversation_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+  constraint conversation_members_role_check CHECK ((role = ANY (ARRAY['admin'::text, 'member'::text])))
+);
+alter table public.conversation_members enable row level security;
+
+create table if not exists public.messages (
+  id bigint generated always as identity not null,
+  conversation_id bigint not null,
+  sender_id uuid,
+  body text not null,
+  created_at timestamp with time zone default now() not null,
+  deleted_at timestamp with time zone,
+  constraint messages_pkey PRIMARY KEY (id),
+  constraint messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  constraint messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES auth.users(id) ON DELETE SET NULL,
+  constraint messages_body_check CHECK ((char_length(body) <= 1000))
+);
+alter table public.messages enable row level security;
+
+create table if not exists public.user_blocks (
+  blocker_id uuid not null,
+  blocked_id uuid not null,
+  created_at timestamp with time zone default now() not null,
+  constraint user_blocks_pkey PRIMARY KEY (blocker_id, blocked_id),
+  constraint user_blocks_blocked_id_fkey FOREIGN KEY (blocked_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+  constraint user_blocks_blocker_id_fkey FOREIGN KEY (blocker_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+alter table public.user_blocks enable row level security;
+
+create table if not exists public.message_reports (
+  id bigint generated always as identity not null,
+  message_id bigint not null,
+  reporter_id uuid,
+  reason text,
+  status text default 'open'::text not null,
+  created_at timestamp with time zone default now() not null,
+  resolved_by uuid,
+  resolved_at timestamp with time zone,
+  constraint message_reports_message_id_reporter_id_key UNIQUE (message_id, reporter_id),
+  constraint message_reports_pkey PRIMARY KEY (id),
+  constraint message_reports_message_id_fkey FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+  constraint message_reports_reporter_id_fkey FOREIGN KEY (reporter_id) REFERENCES auth.users(id) ON DELETE SET NULL,
+  constraint message_reports_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES auth.users(id) ON DELETE SET NULL,
+  constraint message_reports_reason_check CHECK (((reason IS NULL) OR (char_length(reason) <= 200))),
+  constraint message_reports_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text])))
+);
+alter table public.message_reports enable row level security;
+
 -- ===== Индексы =====
+CREATE INDEX conversation_members_user ON public.conversation_members USING btree (user_id);
+CREATE INDEX messages_conv_id ON public.messages USING btree (conversation_id, id DESC);
+CREATE INDEX messages_sender_time ON public.messages USING btree (sender_id, created_at DESC);
 CREATE UNIQUE INDEX one_pending_per_task ON public.submissions USING btree (user_id, task_id) WHERE (status = 'pending'::text);
 CREATE INDEX penalties_user_time ON public.penalties USING btree (user_id, created_at DESC);
 CREATE UNIQUE INDEX profiles_nickname_unique ON public.profiles USING btree (lower(nickname)) WHERE (nickname IS NOT NULL);
@@ -221,6 +296,31 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.add_group_members(p_conv bigint, p_members uuid[])
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); n int;
+begin
+  perform check_can_act(me);
+  perform group_admin_check(p_conv);
+  if (select count(*) from conversation_members where conversation_id = p_conv)
+     + (select count(distinct x) from unnest(coalesce(p_members, '{}')) x
+         where not exists (select 1 from conversation_members m where m.conversation_id = p_conv and m.user_id = x)) > 50 then
+    raise exception 'В группе может быть не больше 50 человек';
+  end if;
+  insert into conversation_members (conversation_id, user_id)
+    select distinct p_conv, x from unnest(coalesce(p_members, '{}')) x
+     where exists (select 1 from profiles where id = x) and not is_blocked_between(me, x)
+  on conflict do nothing;
+  get diagnostics n = row_count;
+  return n;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.approve_submission(sub_id bigint)
  RETURNS text
  LANGUAGE plpgsql
@@ -239,6 +339,20 @@ begin
   update submissions set status = 'approved' where id = sub_id;
   update profiles set points = points + p where id = s.user_id;
   return 'Готово: начислено ' || p || ' TZ';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.block_user(p_user uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if auth.uid() is null or p_user is null or p_user = auth.uid() then raise exception 'Нельзя заблокировать'; end if;
+  insert into user_blocks (blocker_id, blocked_id) values (auth.uid(), p_user) on conflict do nothing;
+  return 'ok';
 end;
 $function$
 ;
@@ -264,6 +378,22 @@ begin
    where id = p_id;
   return 'Задание снято с карты';
 end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.chat_name(p_uid uuid)
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select coalesce(
+    (select case
+       when nullif(trim(p.nickname), '') is not null then trim(p.nickname)
+       when p.birth_year is not null and extract(year from now())::int - p.birth_year <= 14 then 'Участник'
+       else split_part(coalesce(nullif(trim(p.name), ''), 'Участник'), ' ', 1)
+     end from profiles p where p.id = p_uid),
+    'Удалённый аккаунт')
 $function$
 ;
 
@@ -428,6 +558,29 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.create_group(p_title text, p_members uuid[])
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); t text := trim(coalesce(p_title, '')); ids uuid[]; cid bigint;
+begin
+  perform check_can_act(me);
+  if char_length(t) < 1 or char_length(t) > 60 then raise exception 'Название группы — от 1 до 60 символов'; end if;
+  if message_problem(t) is not null then raise exception 'В названии есть недопустимое слово'; end if;
+  select array_agg(distinct x) into ids from unnest(coalesce(p_members, '{}')) x
+   where x <> me and exists (select 1 from profiles where id = x) and not is_blocked_between(me, x);
+  if coalesce(array_length(ids, 1), 0) < 1 then raise exception 'Добавьте хотя бы одного участника'; end if;
+  if array_length(ids, 1) > 49 then raise exception 'В группе может быть не больше 50 человек'; end if;
+  insert into conversations (kind, title, created_by) values ('group', t, me) returning id into cid;
+  insert into conversation_members (conversation_id, user_id, role) values (cid, me, 'admin');
+  insert into conversation_members (conversation_id, user_id) select cid, x from unnest(ids) x;
+  return cid;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.delete_my_account()
  RETURNS text
  LANGUAGE plpgsql
@@ -481,6 +634,14 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.get_blocked_users()
+ RETURNS TABLE(id uuid, name text)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$ select b.blocked_id, chat_name(b.blocked_id) from user_blocks b where b.blocker_id = auth.uid() order by b.created_at desc $function$
+;
+
 CREATE OR REPLACE FUNCTION public.get_community_stats()
  RETURNS json
  LANGUAGE sql
@@ -492,6 +653,75 @@ AS $function$
             + (select count(*) from spot_tasks where status = 'completed'),
     'people', (select count(*) from profiles)
   );
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_conversation(p_conv bigint)
+ RETURNS json
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); c conversations%rowtype; other uuid;
+begin
+  if not is_member(p_conv) then raise exception 'Чат не найден'; end if;
+  select * into c from conversations where id = p_conv;
+  if c.kind = 'direct' then
+    other := (case when split_part(c.direct_key, ':', 1) = me::text then split_part(c.direct_key, ':', 2) else split_part(c.direct_key, ':', 1) end)::uuid;
+  end if;
+  return json_build_object(
+    'id', c.id,
+    'kind', c.kind,
+    'title', case when c.kind = 'group' then c.title else chat_name(other) end,
+    'other_id', other,
+    'my_role', (select role from conversation_members where conversation_id = p_conv and user_id = me),
+    'blocked_by_me', other is not null and exists (select 1 from user_blocks where blocker_id = me and blocked_id = other),
+    'blocked_me', other is not null and exists (select 1 from user_blocks where blocker_id = other and blocked_id = me),
+    'members', coalesce((
+      select json_agg(json_build_object('id', m.user_id, 'name', chat_name(m.user_id), 'emoji', p.avatar_emoji,
+                                        'color', p.avatar_color, 'role', m.role, 'is_me', m.user_id = me)
+                      order by m.role, m.joined_at)
+        from conversation_members m left join profiles p on p.id = m.user_id
+       where m.conversation_id = p_conv), '[]'::json)
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_conversations()
+ RETURNS TABLE(id bigint, kind text, title text, other_id uuid, avatar_emoji text, avatar_color text, last_body text, last_is_mine boolean, last_at timestamp with time zone, unread integer, members integer)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid();
+begin
+  if me is null then raise exception 'Нужно войти в аккаунт'; end if;
+  return query
+    with mine as (
+      select c.*, m.last_read_at,
+             case when c.kind = 'direct' then
+               (case when split_part(c.direct_key, ':', 1) = me::text then split_part(c.direct_key, ':', 2) else split_part(c.direct_key, ':', 1) end)::uuid
+             end as other
+        from conversation_members m join conversations c on c.id = m.conversation_id
+       where m.user_id = me
+    )
+    select x.id, x.kind,
+           case when x.kind = 'group' then x.title else chat_name(x.other) end,
+           x.other,
+           case when x.kind = 'direct' then (select p.avatar_emoji from profiles p where p.id = x.other) end,
+           case when x.kind = 'direct' then (select p.avatar_color from profiles p where p.id = x.other) end,
+           lm.body, lm.sender_id = me, coalesce(lm.created_at, x.created_at),
+           (select count(*)::int from messages u where u.conversation_id = x.id and u.created_at > x.last_read_at
+              and u.sender_id is distinct from me and u.deleted_at is null),
+           (select count(*)::int from conversation_members cm where cm.conversation_id = x.id)
+      from mine x
+      left join lateral (
+        select case when mm.deleted_at is null then mm.body else 'Сообщение удалено' end as body, mm.sender_id, mm.created_at
+          from messages mm where mm.conversation_id = x.id order by mm.id desc limit 1
+      ) lm on true
+     order by coalesce(lm.created_at, x.created_at) desc;
+end;
 $function$
 ;
 
@@ -530,6 +760,53 @@ begin
       from spot_tasks t
      where t.status in ('available','in_progress') or (t.status = 'under_review' and t.assignee_id = auth.uid())
      order by t.created_at desc;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_message_reports()
+ RETURNS TABLE(message_id bigint, sender_id uuid, sender_name text, body text, deleted boolean, sent_at timestamp with time zone, chat_title text, reasons text[], reports integer, context json)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if not is_moderator() then raise exception 'Нет доступа'; end if;
+  return query
+    select m.id, m.sender_id, chat_name(m.sender_id), m.body, m.deleted_at is not null, m.created_at,
+           case when c.kind = 'group' then 'Группа «' || c.title || '»' else 'Личный чат' end,
+           array_remove(array_agg(r.reason order by r.created_at), null),
+           count(*)::int,
+           -- три сообщения до жалобы и само сообщение
+           (select json_agg(json_build_object('id', x.id, 'name', chat_name(x.sender_id),
+                                              'body', case when x.deleted_at is null then x.body else 'Сообщение удалено' end) order by x.id)
+              from (select * from messages y where y.conversation_id = m.conversation_id and y.id <= m.id
+                     order by y.id desc limit 4) x)
+      from message_reports r
+      join messages m on m.id = r.message_id
+      join conversations c on c.id = m.conversation_id
+     where r.status = 'open'
+     group by m.id, c.id
+     order by min(r.created_at);
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_messages(p_conv bigint, p_before bigint DEFAULT NULL::bigint, p_limit integer DEFAULT 50)
+ RETURNS TABLE(id bigint, sender_id uuid, sender_name text, body text, deleted boolean, created_at timestamp with time zone, is_mine boolean)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if not is_member(p_conv) then raise exception 'Чат не найден'; end if;
+  return query
+    select m.id, m.sender_id, chat_name(m.sender_id),
+           case when m.deleted_at is null then m.body end, m.deleted_at is not null, m.created_at, m.sender_id = auth.uid()
+      from messages m
+     where m.conversation_id = p_conv and (p_before is null or m.id < p_before)
+     order by m.id desc
+     limit least(greatest(coalesce(p_limit, 50), 1), 100);
 end;
 $function$
 ;
@@ -650,6 +927,21 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.group_admin_check(p_conv bigint)
+ RETURNS void
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if not exists (select 1 from conversations where id = p_conv and kind = 'group') then raise exception 'Группа не найдена'; end if;
+  if not exists (select 1 from conversation_members where conversation_id = p_conv and user_id = auth.uid() and role = 'admin') then
+    raise exception 'Это может только администратор группы';
+  end if;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -662,6 +954,22 @@ begin
   return new;
 end;
 $function$
+;
+
+CREATE OR REPLACE FUNCTION public.is_blocked_between(a uuid, b uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$ select exists (select 1 from user_blocks where (blocker_id = a and blocked_id = b) or (blocker_id = b and blocked_id = a)) $function$
+;
+
+CREATE OR REPLACE FUNCTION public.is_member(p_conv bigint)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$ select exists (select 1 from conversation_members where conversation_id = p_conv and user_id = auth.uid()) $function$
 ;
 
 CREATE OR REPLACE FUNCTION public.is_moderator()
@@ -681,6 +989,54 @@ CREATE OR REPLACE FUNCTION public.is_visible_task_photo(p_name text)
  SET search_path TO 'public'
 AS $function$
   select exists (select 1 from spot_tasks where p_name = any(photo_paths) and status <> 'cancelled');
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.leave_conversation(p_conv bigint)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); was_admin boolean;
+begin
+  delete from conversation_members where conversation_id = p_conv and user_id = me returning role = 'admin' into was_admin;
+  if not found then raise exception 'Чат не найден'; end if;
+  if not exists (select 1 from conversation_members where conversation_id = p_conv) then
+    delete from conversations where id = p_conv;
+  elsif was_admin and not exists (select 1 from conversation_members where conversation_id = p_conv and role = 'admin') then
+    update conversation_members set role = 'admin'
+     where conversation_id = p_conv
+       and user_id = (select user_id from conversation_members where conversation_id = p_conv order by joined_at limit 1);
+  end if;
+  return 'ok';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.mark_read(p_conv bigint)
+ RETURNS void
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$ update conversation_members set last_read_at = now() where conversation_id = p_conv and user_id = auth.uid() $function$
+;
+
+CREATE OR REPLACE FUNCTION public.message_problem(p_text text)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare w text;
+begin
+  foreach w in array regexp_split_to_array(coalesce(p_text, ''), '\s+') loop
+    if w <> '' and nick_problem(w) is not null then
+      return 'В сообщении есть недопустимое слово';
+    end if;
+  end loop;
+  return null;
+end;
 $function$
 ;
 
@@ -728,6 +1084,28 @@ begin
     return 'Этот ник нельзя использовать: в нём недопустимое слово';
   end if;
   return null;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.open_direct(p_user uuid)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); k text; cid bigint;
+begin
+  perform check_can_act(me);
+  if p_user is null or p_user = me or not exists (select 1 from profiles where id = p_user) then
+    raise exception 'Пользователь не найден';
+  end if;
+  if is_blocked_between(me, p_user) then raise exception 'Нельзя написать этому пользователю'; end if;
+  k := least(me::text, p_user::text) || ':' || greatest(me::text, p_user::text);
+  insert into conversations (kind, direct_key, created_by) values ('direct', k, me) on conflict (direct_key) do nothing;
+  select id into cid from conversations where direct_key = k;
+  insert into conversation_members (conversation_id, user_id) values (cid, me), (cid, p_user) on conflict do nothing;
+  return cid;
 end;
 $function$
 ;
@@ -797,6 +1175,80 @@ begin
    where id = p_id and assignee_id = auth.uid() and status = 'in_progress';
   if not found then raise exception 'Задание не найдено или уже на проверке'; end if;
   return 'ok';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.remove_group_member(p_conv bigint, p_user uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  perform group_admin_check(p_conv);
+  if p_user = auth.uid() then raise exception 'Чтобы выйти, нажмите «Выйти из группы»'; end if;
+  delete from conversation_members where conversation_id = p_conv and user_id = p_user;
+  return 'ok';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.rename_group(p_conv bigint, p_title text)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare t text := trim(coalesce(p_title, ''));
+begin
+  perform group_admin_check(p_conv);
+  if char_length(t) < 1 or char_length(t) > 60 then raise exception 'Название группы — от 1 до 60 символов'; end if;
+  if message_problem(t) is not null then raise exception 'В названии есть недопустимое слово'; end if;
+  update conversations set title = t where id = p_conv;
+  return 'ok';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.report_message(p_message bigint, p_reason text DEFAULT NULL::text)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare m messages%rowtype;
+begin
+  select * into m from messages where id = p_message;
+  if not found or not is_member(m.conversation_id) then raise exception 'Сообщение не найдено'; end if;
+  if m.sender_id = auth.uid() then raise exception 'Нельзя пожаловаться на своё сообщение'; end if;
+  insert into message_reports (message_id, reporter_id, reason) values (p_message, auth.uid(), left(nullif(trim(p_reason), ''), 200))
+  on conflict (message_id, reporter_id) do nothing;
+  return 'ok';
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.resolve_message_report(p_message bigint, p_delete boolean, p_penalty boolean DEFAULT false)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare m messages%rowtype;
+begin
+  if not is_moderator() then return 'Нет доступа'; end if;
+  select * into m from messages where id = p_message for update;
+  if not found then return 'Сообщение не найдено'; end if;
+  if p_delete then update messages set body = '', deleted_at = now() where id = p_message; end if;
+  if p_penalty and m.sender_id is not null then
+    insert into penalties (user_id, moderator_id, source, source_id, points) values (m.sender_id, auth.uid(), 'message', p_message, 0);
+  end if;
+  update message_reports set status = 'resolved', resolved_by = auth.uid(), resolved_at = now()
+   where message_id = p_message and status = 'open';
+  return case when p_penalty then 'Сообщение удалено, нарушение записано'
+              when p_delete then 'Сообщение удалено'
+              else 'Жалоба отклонена' end;
 end;
 $function$
 ;
@@ -933,6 +1385,59 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.search_users(p_query text)
+ RETURNS TABLE(id uuid, name text, avatar_emoji text, avatar_color text)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); q text := trim(coalesce(p_query, ''));
+begin
+  if me is null then raise exception 'Нужно войти в аккаунт'; end if;
+  if char_length(q) < 2 then return; end if;
+  q := replace(replace(replace(q, '\', '\\'), '%', '\%'), '_', '\_');
+  return query
+    select p.id, trim(p.nickname), p.avatar_emoji, p.avatar_color
+      from profiles p
+     where p.nickname ilike q || '%' and p.id <> me and not is_blocked_between(me, p.id)
+     order by char_length(p.nickname), p.nickname
+     limit 20;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.send_message(p_conv bigint, p_body text)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); b text := trim(coalesce(p_body, '')); c conversations%rowtype; other uuid; mid bigint;
+begin
+  perform check_can_act(me);
+  if not is_member(p_conv) then raise exception 'Чат не найден'; end if;
+  if char_length(b) < 1 then raise exception 'Пустое сообщение'; end if;
+  if char_length(b) > 1000 then raise exception 'Сообщение длиннее 1000 символов'; end if;
+  if (select count(*) from messages where sender_id = me and created_at > now() - interval '1 minute') >= 30 then
+    raise exception 'Слишком много сообщений. Подождите минуту';
+  end if;
+  if message_problem(b) is not null then raise exception 'В сообщении есть недопустимое слово'; end if;
+  select * into c from conversations where id = p_conv;
+  if c.kind = 'direct' then
+    other := (select case when split_part(c.direct_key, ':', 1) = me::text then split_part(c.direct_key, ':', 2) else split_part(c.direct_key, ':', 1) end)::uuid;
+    if not exists (select 1 from profiles where id = other) then raise exception 'Аккаунт собеседника удалён'; end if;
+    if is_blocked_between(me, other) then raise exception 'Нельзя написать этому пользователю'; end if;
+    -- собеседник мог удалить чат у себя — возвращаем его, чтобы он увидел сообщение
+    insert into conversation_members (conversation_id, user_id) values (p_conv, other) on conflict do nothing;
+  end if;
+  insert into messages (conversation_id, sender_id, body) values (p_conv, me, b) returning id into mid;
+  update conversations set last_message_at = now() where id = p_conv;
+  update conversation_members set last_read_at = now() where conversation_id = p_conv and user_id = me;
+  return mid;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.submit_report(p_category text, p_description text, p_photo_paths text[], p_lat double precision, p_lng double precision, p_accuracy real DEFAULT NULL::real, p_address text DEFAULT NULL::text)
  RETURNS bigint
  LANGUAGE plpgsql
@@ -1008,6 +1513,28 @@ begin
    where user_id = uid and created_at > now() - make_interval(days => (select fraud_days from moderation_rules()));
   return n;
 end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.unblock_user(p_user uuid)
+ RETURNS text
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$ delete from user_blocks where blocker_id = auth.uid() and blocked_id = p_user; select 'ok'::text $function$
+;
+
+CREATE OR REPLACE FUNCTION public.unread_total()
+ RETURNS integer
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select coalesce(count(*), 0)::int
+    from conversation_members cm
+    join messages m on m.conversation_id = cm.conversation_id
+   where cm.user_id = auth.uid() and m.created_at > cm.last_read_at
+     and m.sender_id is distinct from auth.uid() and m.deleted_at is null
 $function$
 ;
 
@@ -1092,12 +1619,25 @@ grant SELECT on public.spot_tasks to authenticated;
 revoke all on public.banned_words from anon, authenticated;
 revoke all on public.penalties from anon, authenticated;
 revoke all on public.account_deletions from anon, authenticated;
+revoke all on public.conversations from anon, authenticated;
+grant SELECT on public.conversations to authenticated;
+revoke all on public.conversation_members from anon, authenticated;
+grant SELECT on public.conversation_members to authenticated;
+revoke all on public.messages from anon, authenticated;
+grant SELECT on public.messages to authenticated;
+revoke all on public.user_blocks from anon, authenticated;
+revoke all on public.message_reports from anon, authenticated;
 
 -- ===== Права на функции =====
 revoke all on function account_deletion_kind(uuid) from public, anon, authenticated;
+revoke all on function add_group_members(bigint,uuid[]) from public, anon, authenticated;
+grant execute on function add_group_members(bigint,uuid[]) to authenticated;
 revoke all on function approve_submission(bigint) from public, anon, authenticated;
+revoke all on function block_user(uuid) from public, anon, authenticated;
+grant execute on function block_user(uuid) to authenticated;
 revoke all on function cancel_spot_task(bigint,text) from public, anon, authenticated;
 grant execute on function cancel_spot_task(bigint,text) to authenticated;
+revoke all on function chat_name(uuid) from public, anon, authenticated;
 revoke all on function check_account_deletion(uuid) from public, anon, authenticated;
 grant execute on function check_account_deletion(uuid) to authenticated;
 revoke all on function check_can_act(uuid) from public, anon, authenticated;
@@ -1115,6 +1655,8 @@ revoke all on function confirm_parent_consent(text) from public, anon, authentic
 grant execute on function confirm_parent_consent(text) to authenticated;
 revoke all on function count_nearby_reports(double precision,double precision,double precision) from public, anon, authenticated;
 grant execute on function count_nearby_reports(double precision,double precision,double precision) to authenticated;
+revoke all on function create_group(text,uuid[]) from public, anon, authenticated;
+grant execute on function create_group(text,uuid[]) to authenticated;
 revoke all on function delete_my_account() from public, anon, authenticated;
 grant execute on function delete_my_account() to authenticated;
 revoke all on function geo_distance_m(double precision,double precision,double precision,double precision) from public, anon, authenticated;
@@ -1122,12 +1664,22 @@ grant execute on function geo_distance_m(double precision,double precision,doubl
 grant execute on function geo_distance_m(double precision,double precision,double precision,double precision) to anon;
 revoke all on function get_accounts_for_review() from public, anon, authenticated;
 grant execute on function get_accounts_for_review() to authenticated;
+revoke all on function get_blocked_users() from public, anon, authenticated;
+grant execute on function get_blocked_users() to authenticated;
 revoke all on function get_community_stats() from public, anon, authenticated;
 grant execute on function get_community_stats() to authenticated;
+revoke all on function get_conversation(bigint) from public, anon, authenticated;
+grant execute on function get_conversation(bigint) to authenticated;
+revoke all on function get_conversations() from public, anon, authenticated;
+grant execute on function get_conversations() to authenticated;
 revoke all on function get_leaderboard() from public, anon, authenticated;
 grant execute on function get_leaderboard() to authenticated;
 revoke all on function get_map_tasks() from public, anon, authenticated;
 grant execute on function get_map_tasks() to authenticated;
+revoke all on function get_message_reports() from public, anon, authenticated;
+grant execute on function get_message_reports() to authenticated;
+revoke all on function get_messages(bigint,bigint,integer) from public, anon, authenticated;
+grant execute on function get_messages(bigint,bigint,integer) to authenticated;
 revoke all on function get_my_spot_tasks() from public, anon, authenticated;
 grant execute on function get_my_spot_tasks() to authenticated;
 revoke all on function get_portfolio(text) from public, anon, authenticated;
@@ -1138,22 +1690,41 @@ revoke all on function get_spot_task(bigint) from public, anon, authenticated;
 grant execute on function get_spot_task(bigint) to authenticated;
 revoke all on function get_task_results_for_review() from public, anon, authenticated;
 grant execute on function get_task_results_for_review() to authenticated;
+revoke all on function group_admin_check(bigint) from public, anon, authenticated;
 revoke all on function handle_new_user() from public, anon, authenticated;
 grant execute on function handle_new_user() to authenticated;
 grant execute on function handle_new_user() to anon;
+revoke all on function is_blocked_between(uuid,uuid) from public, anon, authenticated;
+revoke all on function is_member(bigint) from public, anon, authenticated;
+grant execute on function is_member(bigint) to authenticated;
 revoke all on function is_moderator() from public, anon, authenticated;
 grant execute on function is_moderator() to authenticated;
 grant execute on function is_moderator() to anon;
 revoke all on function is_visible_task_photo(text) from public, anon, authenticated;
 grant execute on function is_visible_task_photo(text) to authenticated;
+revoke all on function leave_conversation(bigint) from public, anon, authenticated;
+grant execute on function leave_conversation(bigint) to authenticated;
+revoke all on function mark_read(bigint) from public, anon, authenticated;
+grant execute on function mark_read(bigint) to authenticated;
+revoke all on function message_problem(text) from public, anon, authenticated;
 revoke all on function moderation_rules() from public, anon, authenticated;
 revoke all on function nick_problem(text) from public, anon, authenticated;
+revoke all on function open_direct(uuid) from public, anon, authenticated;
+grant execute on function open_direct(uuid) to authenticated;
 revoke all on function penalize_submission(bigint,integer) from public, anon, authenticated;
 grant execute on function penalize_submission(bigint,integer) to authenticated;
 revoke all on function public_name(uuid) from public, anon, authenticated;
 revoke all on function release_expired_claims() from public, anon, authenticated;
 revoke all on function release_task(bigint) from public, anon, authenticated;
 grant execute on function release_task(bigint) to authenticated;
+revoke all on function remove_group_member(bigint,uuid) from public, anon, authenticated;
+grant execute on function remove_group_member(bigint,uuid) to authenticated;
+revoke all on function rename_group(bigint,text) from public, anon, authenticated;
+grant execute on function rename_group(bigint,text) to authenticated;
+revoke all on function report_message(bigint,text) from public, anon, authenticated;
+grant execute on function report_message(bigint,text) to authenticated;
+revoke all on function resolve_message_report(bigint,boolean,boolean) from public, anon, authenticated;
+grant execute on function resolve_message_report(bigint,boolean,boolean) to authenticated;
 revoke all on function review_report(bigint,boolean,text,text,text,integer,integer) from public, anon, authenticated;
 grant execute on function review_report(bigint,boolean,text,text,text,integer,integer) to authenticated;
 revoke all on function review_submission(bigint,boolean,text) from public, anon, authenticated;
@@ -1162,16 +1733,27 @@ revoke all on function review_task_result(bigint,boolean,text,integer) from publ
 grant execute on function review_task_result(bigint,boolean,text,integer) to authenticated;
 revoke all on function save_safety_info(integer,text,text) from public, anon, authenticated;
 grant execute on function save_safety_info(integer,text,text) to authenticated;
+revoke all on function search_users(text) from public, anon, authenticated;
+grant execute on function search_users(text) to authenticated;
+revoke all on function send_message(bigint,text) from public, anon, authenticated;
+grant execute on function send_message(bigint,text) to authenticated;
 revoke all on function submit_report(text,text,text[],double precision,double precision,real,text) from public, anon, authenticated;
 grant execute on function submit_report(text,text,text[],double precision,double precision,real,text) to authenticated;
 revoke all on function submit_task_result(bigint,text,double precision,double precision) from public, anon, authenticated;
 grant execute on function submit_task_result(bigint,text,double precision,double precision) to authenticated;
 revoke all on function touch_activity() from public, anon, authenticated;
 grant execute on function touch_activity() to authenticated;
+revoke all on function unblock_user(uuid) from public, anon, authenticated;
+grant execute on function unblock_user(uuid) to authenticated;
+revoke all on function unread_total() from public, anon, authenticated;
+grant execute on function unread_total() to authenticated;
 revoke all on function update_appearance(text,text,text,text) from public, anon, authenticated;
 grant execute on function update_appearance(text,text,text,text) to authenticated;
 
 -- ===== Политики доступа (RLS) =====
+create policy "Members read members" on public.conversation_members as PERMISSIVE for SELECT to authenticated using (is_member(conversation_id));
+create policy "Members read conversations" on public.conversations as PERMISSIVE for SELECT to authenticated using (is_member(id));
+create policy "Members read messages" on public.messages as PERMISSIVE for SELECT to authenticated using (is_member(conversation_id));
 create policy "Create own link" on public.portfolio_links as PERMISSIVE for INSERT to authenticated with check ((auth.uid() = user_id));
 create policy "Delete own link" on public.portfolio_links as PERMISSIVE for DELETE to authenticated using ((auth.uid() = user_id));
 create policy "Read own link" on public.portfolio_links as PERMISSIVE for SELECT to authenticated using ((auth.uid() = user_id));
@@ -1209,6 +1791,9 @@ insert into storage.buckets (id, name, public) values ('portfolios', 'portfolios
 insert into storage.buckets (id, name, public) values ('reports', 'reports', false) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public) values ('submissions', 'submissions', false) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public) values ('uni-photos', 'uni-photos', true) on conflict (id) do nothing;
+
+-- ===== Realtime: новые сообщения мессенджера =====
+alter publication supabase_realtime add table public.messages;
 
 -- ===== Справочные данные: повседневные задания =====
 insert into public.tasks (id, emoji, title, description, place_type, points, category) overriding system value values

@@ -168,6 +168,25 @@ RPC: `get_community_stats`, `get_leaderboard`, `get_portfolio(p_code)`, `save_sa
   (кроме фото заявок с живыми заданиями на карте) → `auth.admin.deleteUser` (остальное каскадом) → запись в
   `account_deletions` без личных данных. Правило есть в политике конфиденциальности (приложение и сайт).
 
+### Мессенджер (02.11.2026)
+
+- Решения владельца: **писать можно любому по нику**, **только текст**, **без push-уведомлений** (иначе новый APK + Firebase).
+  Сообщения приходят через Supabase Realtime (`messages` в публикации `supabase_realtime`), пока приложение открыто.
+- Таблицы: `conversations` (kind direct/group, title, direct_key = «меньший uuid:больший uuid»), `conversation_members`
+  (role admin/member, last_read_at), `messages` (body ≤ 1000, deleted_at), `user_blocks`, `message_reports`.
+  RLS: участники читают свои чаты/сообщения (нужно для Realtime); запись — только RPC.
+- RPC: `search_users` (по началу ника, без заблокированных), `open_direct`, `create_group` (≤ 50 человек), `add_group_members`,
+  `remove_group_member`, `rename_group` (админ), `leave_conversation` (в личном — удалить у себя; админ уходит → админ следующий),
+  `send_message` (check_can_act — дети без согласия не пишут; ≤ 30 в минуту; фильтр `message_problem` = `nick_problem` по словам;
+  блокировка в личном чате), `get_conversations`, `get_conversation` (json), `get_messages(p_before)`, `mark_read`, `unread_total`,
+  `block_user` / `unblock_user` / `get_blocked_users`, `report_message`; модератор — `get_message_reports` (+3 сообщения до),
+  `resolve_message_report(delete, penalty)` → нарушение в `penalties` (source `message`).
+- Имя в чате — `chat_name(uid)`: ник; без ника — «Участник» для детей ≤ 14, иначе первое имя. Найти можно только тех, у кого есть ник.
+- Экраны: `chats.tsx` (список), `new-chat.tsx` (поиск; `?group=1` — новая группа, `?add=<id>` — добавить), `chat/[id].tsx`
+  (переписка, долгое нажатие — жалоба), `chat-info/[id].tsx` (участники, блокировка, выход), `blocked.tsx`; `lib/chat.ts`.
+  Вход — иконка с красным счётчиком в шапке главной. Модератор — вкладка «Жалобы» (`moderation/message-reports.tsx`).
+- Новые экраны требуют обновить типы маршрутов (`.expo/types/router.d.ts`) — создаются при `npx expo start`.
+
 ### Эко-система «сообщить → задание на карте → уборка» (готова 30.10.2026, все 6 этапов)
 
 Сценарий: заявка с фото → модератор публикует → задание на карте → другой участник принимает (бронь 48 ч) →

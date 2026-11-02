@@ -3,6 +3,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { AccountsReview } from "../components/moderation/accounts-review";
+import { MessageReports } from "../components/moderation/message-reports";
 import { ReportsReview } from "../components/moderation/reports-review";
 import { ResultsReview } from "../components/moderation/results-review";
 import { Shot } from "../components/moderation/shot";
@@ -35,11 +36,12 @@ type Item = {
   afterUrl?: string;
 };
 
-// вкладки модерации: обычные задания, заявки о загрязнении, результаты уборки мест с карты, аккаунты на удаление
+// вкладки модерации: обычные задания, заявки о загрязнении, результаты уборки мест с карты, жалобы на сообщения, аккаунты на удаление
 const TABS = [
   { k: "tasks", label: "Задания" },
   { k: "reports", label: "Заявки" },
   { k: "results", label: "Уборка" },
+  { k: "messages", label: "Жалобы" },
   { k: "accounts", label: "Аккаунты" },
 ] as const;
 
@@ -164,6 +166,7 @@ export default function ModeratorScreen() {
 
       {tab === "reports" && <ReportsReview />}
       {tab === "results" && <ResultsReview />}
+      {tab === "messages" && <MessageReports />}
       {tab === "accounts" && <AccountsReview />}
 
       {tab === "tasks" && (

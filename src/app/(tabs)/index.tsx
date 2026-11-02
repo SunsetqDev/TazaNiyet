@@ -22,6 +22,7 @@ import { avatarUrl } from "../../lib/avatar";
 import { getRank, getRankIndex } from "../../lib/ranks";
 import { reportCategory } from "../../lib/reports";
 import { distanceM, formatDistance, type MapTask } from "../../lib/spot-tasks";
+import { subscribeMessages } from "../../lib/chat";
 import { supabase } from "../../lib/supabase";
 import { categoryTint, color, font, radius, space } from "../../lib/theme";
 
@@ -99,6 +100,8 @@ export default function TasksScreen() {
   const [needConsent, setNeedConsent] = useState(false);
   // нарушений («Обман») за 90 дней: после 3 модератор может удалить аккаунт, после 2 — предупреждаем
   const [penalties, setPenalties] = useState(0);
+  // непрочитанные сообщения — счётчик на иконке мессенджера
+  const [unread, setUnread] = useState(0);
   const [cat, setCat] = useState("all");
   const [streak, setStreak] = useState(0);
   const [done, setDone] = useState(0);
@@ -109,6 +112,16 @@ export default function TasksScreen() {
   // задания на карте: моё текущее и ближайшие свободные
   const [myTask, setMyTask] = useState<MapTask | null>(null);
   const [nearby, setNearby] = useState<{ t: MapTask; d: number | null }[]>([]);
+
+  useFocusEffect(
+    useCallback(
+      () =>
+        subscribeMessages("home-unread", () =>
+          supabase.rpc("unread_total").then(({ data: n }) => setUnread(typeof n === "number" ? n : 0))
+        ),
+      []
+    )
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -162,6 +175,7 @@ export default function TasksScreen() {
         setNeedConsent(age <= 14 && !data.parent_verified);
         // отметка активности (неактивные 6 месяцев аккаунты модератор может удалить)
         supabase.rpc("touch_activity").then(({ data: n }) => setPenalties(typeof n === "number" ? n : 0));
+        supabase.rpc("unread_total").then(({ data: n }) => setUnread(typeof n === "number" ? n : 0));
 
         // approved и pending считаем активностью: баобаб оживает сразу после отправки задания
         const { data: subs } = await supabase
@@ -263,6 +277,14 @@ export default function TasksScreen() {
               Привет, {look.nickname || name || "друг"}
             </AppText>
           </View>
+          <PressScale onPress={() => router.push("/chats")} scaleTo={0.92} style={s.chatBtn}>
+            <Ionicons name="chatbubbles-outline" size={22} color={color.ink} />
+            {unread > 0 && (
+              <View style={s.chatBadge}>
+                <AppText style={s.chatBadgeText}>{unread > 99 ? "99+" : unread}</AppText>
+              </View>
+            )}
+          </PressScale>
           <PressScale onPress={() => router.push("/edit-profile")}>
             <Avatar name={look.nickname || name} emoji={look.emoji} color={look.color} photo={photo} size={48} />
           </PressScale>
@@ -513,6 +535,31 @@ const s = StyleSheet.create({
   dayBtn: { minHeight: 44, paddingHorizontal: space.x4 },
   chips: { marginHorizontal: -space.gutter, flexGrow: 0 },
   rowPts: { fontFamily: font.bold, fontSize: 14, color: color.forest },
+  chatBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: color.danger,
+    borderWidth: 2,
+    borderColor: color.cream,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatBadgeText: { fontFamily: font.bold, fontSize: 10, lineHeight: 12, color: color.surface },
   allList: { marginTop: space.x3, paddingVertical: 0 },
   allEmoji: { fontSize: 20, width: 28, textAlign: "center" },
   allPts: { fontFamily: font.semibold, fontSize: 13, color: color.muted },
