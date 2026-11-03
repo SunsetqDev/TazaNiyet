@@ -1,4 +1,4 @@
--- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-11-02, после мессенджера).
+-- Резервная копия структуры базы Supabase проекта TazaNiyet (снимок 2026-11-03, после казахского языка и защиты).
 -- Таблицы, индексы, функции (RPC), права, политики RLS, триггеры, бакеты Storage
 -- и справочные данные (повседневные задания, вузы).
 -- Личных данных пользователей (профили, заявки, фото) здесь НЕТ — они хранятся только в Supabase.
@@ -40,6 +40,8 @@ create table if not exists public.tasks (
   place_type text default 'any'::text not null,
   points integer not null,
   category text default 'other'::text not null,
+  title_kk text,
+  description_kk text,
   constraint tasks_pkey PRIMARY KEY (id)
 );
 alter table public.tasks enable row level security;
@@ -266,6 +268,16 @@ create table if not exists public.message_reports (
 );
 alter table public.message_reports enable row level security;
 
+create table if not exists public.rate_limits (
+  user_id uuid not null,
+  action text not null,
+  window_start timestamp with time zone not null,
+  hits integer default 0 not null,
+  constraint rate_limits_pkey PRIMARY KEY (user_id, action),
+  constraint rate_limits_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+);
+alter table public.rate_limits enable row level security;
+
 -- ===== Индексы =====
 CREATE INDEX conversation_members_user ON public.conversation_members USING btree (user_id);
 CREATE INDEX messages_conv_id ON public.messages USING btree (conversation_id, id DESC);
@@ -436,13 +448,14 @@ $function$
 CREATE OR REPLACE FUNCTION public.check_nickname(p_nick text)
  RETURNS text
  LANGUAGE plpgsql
- STABLE SECURITY DEFINER
+ SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
 declare n text := nullif(trim(p_nick), ''); problem text;
 begin
   if auth.uid() is null then return 'Нужно войти в аккаунт'; end if;
   if n is null then return null; end if;
+  if not hit_rate('nick', 60, 60) then return 'Слишком много запросов. Подождите минуту'; end if;
   problem := nick_problem(n);
   if problem is not null then return problem; end if;
   if exists (select 1 from profiles where lower(nickname) = lower(n) and id <> auth.uid()) then
@@ -956,6 +969,25 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.hit_rate(p_action text, p_max integer, p_seconds integer)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare uid uuid := auth.uid(); r rate_limits%rowtype;
+begin
+  if uid is null then return false; end if;
+  insert into rate_limits (user_id, action, window_start, hits) values (uid, p_action, now(), 1)
+  on conflict (user_id, action) do update
+    set hits = case when rate_limits.window_start < now() - make_interval(secs => p_seconds) then 1 else rate_limits.hits + 1 end,
+        window_start = case when rate_limits.window_start < now() - make_interval(secs => p_seconds) then now() else rate_limits.window_start end
+  returning * into r;
+  return r.hits <= p_max;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.is_blocked_between(a uuid, b uuid)
  RETURNS boolean
  LANGUAGE sql
@@ -1222,6 +1254,7 @@ begin
   select * into m from messages where id = p_message;
   if not found or not is_member(m.conversation_id) then raise exception 'Сообщение не найдено'; end if;
   if m.sender_id = auth.uid() then raise exception 'Нельзя пожаловаться на своё сообщение'; end if;
+  if not hit_rate('report', 20, 3600) then raise exception 'Слишком много жалоб. Попробуйте позже'; end if;
   insert into message_reports (message_id, reporter_id, reason) values (p_message, auth.uid(), left(nullif(trim(p_reason), ''), 200))
   on conflict (message_id, reporter_id) do nothing;
   return 'ok';
@@ -1388,13 +1421,14 @@ $function$
 CREATE OR REPLACE FUNCTION public.search_users(p_query text)
  RETURNS TABLE(id uuid, name text, avatar_emoji text, avatar_color text)
  LANGUAGE plpgsql
- STABLE SECURITY DEFINER
+ SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
 declare me uuid := auth.uid(); q text := trim(coalesce(p_query, ''));
 begin
   if me is null then raise exception 'Нужно войти в аккаунт'; end if;
   if char_length(q) < 2 then return; end if;
+  if not hit_rate('search', 60, 60) then raise exception 'Слишком много запросов. Подождите минуту'; end if;
   q := replace(replace(replace(q, '\', '\\'), '%', '\%'), '_', '\_');
   return query
     select p.id, trim(p.nickname), p.avatar_emoji, p.avatar_color
@@ -1627,6 +1661,7 @@ revoke all on public.messages from anon, authenticated;
 grant SELECT on public.messages to authenticated;
 revoke all on public.user_blocks from anon, authenticated;
 revoke all on public.message_reports from anon, authenticated;
+revoke all on public.rate_limits from anon, authenticated;
 
 -- ===== Права на функции =====
 revoke all on function account_deletion_kind(uuid) from public, anon, authenticated;
@@ -1644,11 +1679,7 @@ revoke all on function check_can_act(uuid) from public, anon, authenticated;
 revoke all on function check_nickname(text) from public, anon, authenticated;
 grant execute on function check_nickname(text) to authenticated;
 revoke all on function check_safety_before_submit() from public, anon, authenticated;
-grant execute on function check_safety_before_submit() to authenticated;
-grant execute on function check_safety_before_submit() to anon;
 revoke all on function check_submission_limits() from public, anon, authenticated;
-grant execute on function check_submission_limits() to authenticated;
-grant execute on function check_submission_limits() to anon;
 revoke all on function claim_task(bigint) from public, anon, authenticated;
 grant execute on function claim_task(bigint) to authenticated;
 revoke all on function confirm_parent_consent(text) from public, anon, authenticated;
@@ -1692,14 +1723,12 @@ revoke all on function get_task_results_for_review() from public, anon, authenti
 grant execute on function get_task_results_for_review() to authenticated;
 revoke all on function group_admin_check(bigint) from public, anon, authenticated;
 revoke all on function handle_new_user() from public, anon, authenticated;
-grant execute on function handle_new_user() to authenticated;
-grant execute on function handle_new_user() to anon;
+revoke all on function hit_rate(text,integer,integer) from public, anon, authenticated;
 revoke all on function is_blocked_between(uuid,uuid) from public, anon, authenticated;
 revoke all on function is_member(bigint) from public, anon, authenticated;
 grant execute on function is_member(bigint) to authenticated;
 revoke all on function is_moderator() from public, anon, authenticated;
 grant execute on function is_moderator() to authenticated;
-grant execute on function is_moderator() to anon;
 revoke all on function is_visible_task_photo(text) from public, anon, authenticated;
 grant execute on function is_visible_task_photo(text) to authenticated;
 revoke all on function leave_conversation(bigint) from public, anon, authenticated;
@@ -1795,24 +1824,24 @@ insert into storage.buckets (id, name, public) values ('uni-photos', 'uni-photos
 -- ===== Realtime: новые сообщения мессенджера =====
 alter publication supabase_realtime add table public.messages;
 
--- ===== Справочные данные: повседневные задания =====
-insert into public.tasks (id, emoji, title, description, place_type, points, category) overriding system value values
-  (1, '🧹', 'Уборка у своего двора', 'Соберите мусор рядом с домом (примерно 50 метров). Работайте в перчатках, не трогайте стекло и шприцы. Сфотографируйте место до и после, с мешками мусора.', 'any', 20, 'clean'),
-  (2, '🌳', 'Посади дерево или саженец', 'Посадите дерево во дворе, у школы или на улице с разрешения владельца или администрации. Полейте его. Фото до (ямка) и после (саженец).', 'any', 80, 'trees'),
-  (3, '♻️', 'Сдай пластик или макулатуру', 'Соберите дома или в школе пластик, бумагу или батарейки и сдайте в пункт приёма. Фото сданного материала.', 'any', 40, 'recycle'),
-  (4, '💧', 'Неделя экономии воды', '7 дней закрывайте кран при чистке зубов и мытье посуды. Фото показаний счётчика (или записи в блокноте) в начале и в конце недели.', 'any', 30, 'water'),
-  (5, '🛍', 'Неделя без пакетов', '7 дней ходите в магазин с многоразовой сумкой. Фото сумки в магазине и ваша заметка за каждый день.', 'any', 30, 'recycle'),
-  (6, '🐦', 'Сделай кормушку для птиц', 'Сделайте кормушку из бутылки или коробки и повесьте во дворе. Фото процесса и готовой кормушки на месте.', 'any', 40, 'animals'),
-  (7, '📚', 'Эко-урок для семьи или класса', 'Проведите 15-минутный рассказ о сортировке мусора или экономии воды для младших или родных. Фото с занятия (без лиц детей, если нет разрешения).', 'any', 60, 'edu'),
-  (8, '🏫', 'Озеленение школьного двора', 'Вместе с классом и учителем посадите цветы или кусты на территории школы. Нужно разрешение школы. Фото до и после.', 'any', 100, 'trees'),
-  (9, '🗑', 'Найди пункт раздельного сбора', 'Найдите в своём городе контейнеры или пункт приёма вторсырья и сфотографируйте их с табличкой или адресом. Расскажите об этом в классе.', 'city', 50, 'recycle'),
-  (10, '🚏', 'Уборка остановки или детской площадки', 'Уберите мусор вокруг остановки или площадки рядом с домом. Не трогайте острые предметы. Фото до и после.', 'city', 40, 'clean'),
-  (11, '🔋', 'Сдай батарейки', 'Соберите старые батарейки и сдайте в пункт приёма. Хранить дома лучше в закрытой банке. Фото сдачи.', 'city', 50, 'recycle'),
-  (12, '🌾', 'Уборка вдоль арыка или пруда', 'Уберите мусор на берегу, не заходя в воду. Обязательно с взрослыми. Фото до и после.', 'village', 100, 'clean'),
-  (13, '🐑', 'Сбор пластика у дороги или на пастбище', 'Соберите бутылки и пакеты возле дороги или пастбища (в стороне от трассы). Фото мешков с мусором.', 'village', 60, 'clean'),
-  (14, '🏘', 'Уборка у школы, клуба или остановки', 'Организуйте уборку общественного места в вашем ауле вместе с друзьями или соседями. Фото до и после.', 'village', 50, 'clean'),
-  (15, '🔥', 'Не сжигай мусор: расскажи соседям', 'Подготовьте короткую памятку, почему нельзя жечь пластик и мусор, и расскажите 5 семьям. Фото памятки и вашей беседы.', 'village', 50, 'edu'),
-  (16, '🌱', 'Посади деревья вдоль улицы', 'Посадите 3 саженца у дома или вдоль улицы и договоритесь, кто будет их поливать. Фото до и после.', 'village', 90, 'trees')
+-- ===== Справочные данные: повседневные задания (ru + kk) =====
+insert into public.tasks (id, emoji, title, description, place_type, points, category, title_kk, description_kk) overriding system value values
+  (1, '🧹', 'Уборка у своего двора', 'Соберите мусор рядом с домом (примерно 50 метров). Работайте в перчатках, не трогайте стекло и шприцы. Сфотографируйте место до и после, с мешками мусора.', 'any', 20, 'clean', 'Өз аулаңды тазала', 'Үйдің жанындағы қоқысты жинаңыз (шамамен 50 метр). Қолғаппен жұмыс істеңіз, шыны мен шприцтерге тиіспеңіз. Жерді тазалауға дейін және кейін, қоқыс қаптарымен бірге суретке түсіріңіз.'),
+  (2, '🌳', 'Посади дерево или саженец', 'Посадите дерево во дворе, у школы или на улице с разрешения владельца или администрации. Полейте его. Фото до (ямка) и после (саженец).', 'any', 80, 'trees', 'Ағаш не көшет отырғыз', 'Иесінің немесе әкімшіліктің рұқсатымен ағашты аулаға, мектеп жанына немесе көшеге отырғызыңыз. Оны суарыңыз. Дейінгі (шұңқыр) және кейінгі (көшет) фото.'),
+  (3, '♻️', 'Сдай пластик или макулатуру', 'Соберите дома или в школе пластик, бумагу или батарейки и сдайте в пункт приёма. Фото сданного материала.', 'any', 40, 'recycle', 'Пластик не қағаз қалдығын өткіз', 'Үйде немесе мектепте пластик, қағаз не батарейка жинап, қабылдау пунктіне өткізіңіз. Өткізілген материалдың фотосы.'),
+  (4, '💧', 'Неделя экономии воды', '7 дней закрывайте кран при чистке зубов и мытье посуды. Фото показаний счётчика (или записи в блокноте) в начале и в конце недели.', 'any', 30, 'water', 'Су үнемдеу аптасы', '7 күн бойы тіс тазалағанда және ыдыс жуғанда кранды жабыңыз. Апта басында және соңында есептегіш көрсеткішінің (немесе дәптердегі жазбаның) фотосы.'),
+  (5, '🛍', 'Неделя без пакетов', '7 дней ходите в магазин с многоразовой сумкой. Фото сумки в магазине и ваша заметка за каждый день.', 'any', 30, 'recycle', 'Пакетсіз апта', '7 күн дүкенге көп реттік сөмкемен барыңыз. Дүкендегі сөмкенің фотосы және әр күнгі жазбаңыз.'),
+  (6, '🐦', 'Сделай кормушку для птиц', 'Сделайте кормушку из бутылки или коробки и повесьте во дворе. Фото процесса и готовой кормушки на месте.', 'any', 40, 'animals', 'Құстарға жемсауыт жаса', 'Бөтелкеден не қораптан жемсауыт жасап, аулаға іліңіз. Жасау барысының және орнына ілінген жемсауыттың фотосы.'),
+  (7, '📚', 'Эко-урок для семьи или класса', 'Проведите 15-минутный рассказ о сортировке мусора или экономии воды для младших или родных. Фото с занятия (без лиц детей, если нет разрешения).', 'any', 60, 'edu', 'Отбасыға не сыныпқа эко-сабақ', 'Кішілерге не туыстарыңызға қоқысты сұрыптау немесе су үнемдеу туралы 15 минуттық әңгіме өткізіңіз. Сабақтан фото (рұқсат болмаса, балалардың бетінсіз).'),
+  (8, '🏫', 'Озеленение школьного двора', 'Вместе с классом и учителем посадите цветы или кусты на территории школы. Нужно разрешение школы. Фото до и после.', 'any', 100, 'trees', 'Мектеп ауласын көгалдандыру', 'Сыныппен және мұғаліммен бірге мектеп аумағына гүл не бұта отырғызыңыз. Мектептің рұқсаты керек. Дейін және кейін фото.'),
+  (9, '🗑', 'Найди пункт раздельного сбора', 'Найдите в своём городе контейнеры или пункт приёма вторсырья и сфотографируйте их с табличкой или адресом. Расскажите об этом в классе.', 'city', 50, 'recycle', 'Бөлек жинау пунктін тап', 'Қалаңыздан қайталама шикізатқа арналған контейнерлерді не қабылдау пунктін тауып, тақтайшасымен не мекенжайымен суретке түсіріңіз. Бұл туралы сыныпта айтыңыз.'),
+  (10, '🚏', 'Уборка остановки или детской площадки', 'Уберите мусор вокруг остановки или площадки рядом с домом. Не трогайте острые предметы. Фото до и после.', 'city', 40, 'clean', 'Аялдаманы не балалар алаңын тазалау', 'Үйдің жанындағы аялдама не алаң маңындағы қоқысты жинаңыз. Өткір заттарға тиіспеңіз. Дейін және кейін фото.'),
+  (11, '🔋', 'Сдай батарейки', 'Соберите старые батарейки и сдайте в пункт приёма. Хранить дома лучше в закрытой банке. Фото сдачи.', 'city', 50, 'recycle', 'Батарейкаларды өткіз', 'Ескі батарейкаларды жинап, қабылдау пунктіне өткізіңіз. Үйде жабық банкада сақтаған дұрыс. Өткізу фотосы.'),
+  (12, '🌾', 'Уборка вдоль арыка или пруда', 'Уберите мусор на берегу, не заходя в воду. Обязательно с взрослыми. Фото до и после.', 'village', 100, 'clean', 'Арық не тоған бойын тазалау', 'Суға кірмей, жағадағы қоқысты жинаңыз. Міндетті түрде үлкендермен бірге. Дейін және кейін фото.'),
+  (13, '🐑', 'Сбор пластика у дороги или на пастбище', 'Соберите бутылки и пакеты возле дороги или пастбища (в стороне от трассы). Фото мешков с мусором.', 'village', 60, 'clean', 'Жол бойынан не жайылымнан пластик жинау', 'Жол не жайылым маңындағы (трассадан алыс) бөтелкелер мен пакеттерді жинаңыз. Қоқыс қаптарының фотосы.'),
+  (14, '🏘', 'Уборка у школы, клуба или остановки', 'Организуйте уборку общественного места в вашем ауле вместе с друзьями или соседями. Фото до и после.', 'village', 50, 'clean', 'Мектеп, клуб не аялдама маңын тазалау', 'Ауылыңыздағы қоғамдық орынды достарыңызбен не көршілеріңізбен бірге тазалауды ұйымдастырыңыз. Дейін және кейін фото.'),
+  (15, '🔥', 'Не сжигай мусор: расскажи соседям', 'Подготовьте короткую памятку, почему нельзя жечь пластик и мусор, и расскажите 5 семьям. Фото памятки и вашей беседы.', 'village', 50, 'edu', 'Қоқысты өртеме: көршілерге айт', 'Пластик пен қоқысты неге өртеуге болмайтыны туралы қысқа жадынама дайындап, 5 отбасыға айтыңыз. Жадынама мен әңгімеңіздің фотосы.'),
+  (16, '🌱', 'Посади деревья вдоль улицы', 'Посадите 3 саженца у дома или вдоль улицы и договоритесь, кто будет их поливать. Фото до и после.', 'village', 90, 'trees', 'Көше бойына ағаш отырғыз', 'Үйдің жанына не көше бойына 3 көшет отырғызып, оларды кім суаратынын келісіңіз. Дейін және кейін фото.')
 on conflict (id) do nothing;
 
 -- ===== Справочные данные: вузы =====
