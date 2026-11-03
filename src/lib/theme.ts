@@ -31,6 +31,54 @@ export const categoryTint: Record<string, string> = {
   animals: "#F3E4D9",
 };
 
+// ===== Тёмная тема =====
+// Значения подменяются в тех же объектах color / categoryTint при запуске (lib/prefs.ts → applyTheme),
+// до загрузки экранов, поэтому StyleSheet.create в экранах сразу получает нужную палитру.
+// forest в тёмной теме светлее: он и фон hero-карточки/кнопок, и цвет текста-акцента на тёмном фоне.
+const DARK: typeof color = {
+  forest: "#358058",
+  moss: "#2B6B49",
+  mossLine: "#3E8A62",
+  lime: "#C9F36A",
+  limeSoft: "#24361F",
+  cream: "#0F1A15",
+  surface: "#17241D",
+  sand: "#22322A",
+  ink: "#EAEFE8",
+  muted: "#9AA59E",
+  faint: "#6F7B74",
+  line: "#2A3B32",
+  onForest: "#F6F4EC",
+  onForestMuted: "#CFE3D6",
+  warn: "#E0B84A",
+  warnSoft: "#3A3013",
+  danger: "#FF8A80",
+  dangerSoft: "#3D1F1C",
+};
+const DARK_TINT: Record<string, string> = {
+  clean: "#22331F",
+  trees: "#20321D",
+  recycle: "#1E2C33",
+  water: "#1B2F35",
+  edu: "#352E1E",
+  animals: "#36281F",
+};
+
+export type ThemeMode = "system" | "light" | "dark";
+let dark = false;
+
+export function applyTheme(mode: "light" | "dark") {
+  dark = mode === "dark";
+  if (dark) {
+    Object.assign(color, DARK);
+    Object.assign(categoryTint, DARK_TINT);
+  }
+}
+
+export function isDark() {
+  return dark;
+}
+
 export const space = { x1: 4, x2: 8, x3: 12, x4: 16, x5: 20, x6: 24, x8: 32, x10: 40, gutter: 20 };
 export const radius = { icon: 12, field: 16, card: 24, hero: 28, pill: 999 };
 

@@ -13,7 +13,9 @@ const LINE = new Set(["add", "arrow-back", "arrow-up", "chevron-forward", "close
 
 // заливка «тела» наклейки под цвет контура: на светлом фоне — лайм, у красных — бледно-красная и т. д.;
 // светлые контуры (иконки на тёмно-зелёном) — без заливки
-const BODY: Record<string, string | null> = {
+// (таблица строится при первом вызове: цвета темы подставляются при запуске)
+let BODY: Record<string, string | null> | null = null;
+const bodyTable = (): Record<string, string | null> => ({
   [palette.danger]: palette.dangerSoft,
   [palette.warn]: palette.warnSoft,
   [palette.muted]: palette.sand,
@@ -24,7 +26,7 @@ const BODY: Record<string, string | null> = {
   [palette.cream]: null,
   [palette.surface]: null,
   "#FFFFFF": null,
-};
+});
 
 type Props = { name: IconName; size?: number; color?: string; style?: StyleProp<ViewStyle> };
 
@@ -35,6 +37,7 @@ export function Icon({ name, size = 24, color = palette.ink, style }: Props) {
   const key = ICON_ALIASES[base] ?? base;
   const paths = ICON_PATHS[key];
   if (!paths) return <Ionicons name={name} size={size} color={color} style={style as never} />;
+  BODY ??= bodyTable();
   const body = color in BODY ? BODY[color] : palette.lime;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" style={style}>
