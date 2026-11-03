@@ -15,6 +15,7 @@ import { TextField } from "../../components/ui/text-field";
 import { chatError, type ChatInfo, type ChatMember } from "../../lib/chat";
 import { supabase } from "../../lib/supabase";
 import { color, radius, space } from "../../lib/theme";
+import { tr } from "../../lib/i18n";
 
 /** Настройки чата: для группы — участники, название, выход; для личного — блокировка и удаление чата у себя. */
 export default function ChatInfoScreen() {
@@ -48,7 +49,7 @@ export default function ChatInfoScreen() {
     const { error } = await supabase.rpc(fn, args);
     setBusy(false);
     if (error) {
-      Alert.alert("Не получилось", chatError(error));
+      Alert.alert(tr("Не получилось"), chatError(error));
       return;
     }
     if (after) after();
@@ -59,26 +60,26 @@ export default function ChatInfoScreen() {
 
   const leave = () =>
     Alert.alert(
-      info?.kind === "group" ? "Выйти из группы?" : "Удалить чат?",
+      info?.kind === "group" ? tr("Выйти из группы?") : tr("Удалить чат?"),
       info?.kind === "group"
-        ? "Вы больше не будете видеть сообщения группы. Вернуть может администратор."
-        : "Чат исчезнет только у вас. Если собеседник напишет снова, чат вернётся.",
+        ? tr("Вы больше не будете видеть сообщения группы. Вернуть может администратор.")
+        : tr("Чат исчезнет только у вас. Если собеседник напишет снова, чат вернётся."),
       [
-        { text: "Отмена", style: "cancel" },
-        { text: info?.kind === "group" ? "Выйти" : "Удалить", style: "destructive", onPress: () => run("leave_conversation", { p_conv: conv }, toChats) },
+        { text: tr("Отмена"), style: "cancel" },
+        { text: info?.kind === "group" ? tr("Выйти") : tr("Удалить"), style: "destructive", onPress: () => run("leave_conversation", { p_conv: conv }, toChats) },
       ]
     );
 
   const removeMember = (m: ChatMember) =>
-    Alert.alert("Убрать из группы?", `${m.name} больше не увидит сообщения группы.`, [
-      { text: "Отмена", style: "cancel" },
-      { text: "Убрать", style: "destructive", onPress: () => run("remove_group_member", { p_conv: conv, p_user: m.id }) },
+    Alert.alert(tr("Убрать из группы?"), tr("{0} больше не увидит сообщения группы.", m.name), [
+      { text: tr("Отмена"), style: "cancel" },
+      { text: tr("Убрать"), style: "destructive", onPress: () => run("remove_group_member", { p_conv: conv, p_user: m.id }) },
     ]);
 
   const block = () =>
-    Alert.alert("Заблокировать?", "Этот участник не сможет писать вам, звать в группы и находить вас в поиске.", [
-      { text: "Отмена", style: "cancel" },
-      { text: "Заблокировать", style: "destructive", onPress: () => run("block_user", { p_user: info?.other_id }) },
+    Alert.alert(tr("Заблокировать?"), tr("Этот участник не сможет писать вам, звать в группы и находить вас в поиске."), [
+      { text: tr("Отмена"), style: "cancel" },
+      { text: tr("Заблокировать"), style: "destructive", onPress: () => run("block_user", { p_user: info?.other_id }) },
     ]);
 
   if (loading) {
@@ -116,16 +117,16 @@ export default function ChatInfoScreen() {
         <AppText variant="h2" style={{ marginTop: space.x3, textAlign: "center" }}>
           {info.title}
         </AppText>
-        <AppText variant="caption">{group ? `Группа · ${info.members.length} участн.` : "Личный чат"}</AppText>
+        <AppText variant="caption">{group ? tr("Группа · {0} участн.", info.members.length) : tr("Личный чат")}</AppText>
       </View>
 
       {group && admin && (
         <View style={s.rename}>
           <View style={{ flex: 1 }}>
-            <TextField label="Название группы" maxLength={60} value={title} onChangeText={setTitle} />
+            <TextField label={tr("Название группы")} maxLength={60} value={title} onChangeText={setTitle} />
           </View>
           <Button
-            label="Сохранить"
+            label={tr("Сохранить")}
             variant="secondary"
             disabled={busy || !title.trim() || title.trim() === info.title}
             onPress={() => run("rename_group", { p_conv: conv, p_title: title })}
@@ -137,8 +138,8 @@ export default function ChatInfoScreen() {
       {group && (
         <>
           <SectionHeader
-            title="Участники"
-            action={admin && info.members.length < 50 ? "Добавить" : undefined}
+            title={tr("Участники")}
+            action={admin && info.members.length < 50 ? tr("Добавить") : undefined}
             onAction={() => router.push({ pathname: "/new-chat", params: { add: String(conv) } })}
           />
           <Card style={{ paddingVertical: 0 }}>
@@ -147,9 +148,9 @@ export default function ChatInfoScreen() {
                 <Avatar name={m.name} emoji={m.emoji} color={m.color} size={40} />
                 <View style={{ flex: 1 }}>
                   <AppText variant="bodyStrong" numberOfLines={1}>
-                    {m.is_me ? `${m.name} (вы)` : m.name}
+                    {m.is_me ? tr("{0} (вы)", m.name) : m.name}
                   </AppText>
-                  {m.role === "admin" ? <AppText variant="caption">администратор</AppText> : null}
+                  {m.role === "admin" ? <AppText variant="caption">{tr("администратор")}</AppText> : null}
                 </View>
                 {admin && !m.is_me ? (
                   <Pressable onPress={() => removeMember(m)} hitSlop={10} disabled={busy}>
@@ -165,22 +166,20 @@ export default function ChatInfoScreen() {
       {!group && info.other_id && (
         <View style={{ marginTop: space.x5 }}>
           {info.blocked_by_me ? (
-            <Button label="Разблокировать" variant="secondary" icon="lock-open-outline" onPress={() => run("unblock_user", { p_user: info.other_id })} loading={busy} />
+            <Button label={tr("Разблокировать")} variant="secondary" icon="lock-open-outline" onPress={() => run("unblock_user", { p_user: info.other_id })} loading={busy} />
           ) : (
-            <Button label="Заблокировать" variant="secondary" icon="ban-outline" onPress={block} loading={busy} />
+            <Button label={tr("Заблокировать")} variant="secondary" icon="ban-outline" onPress={block} loading={busy} />
           )}
         </View>
       )}
 
       <View style={s.tip}>
         <Icon name="shield-checkmark-outline" size={18} color={color.muted} />
-        <AppText variant="caption" style={{ flex: 1 }}>
-          Если вам пишут грубости, просят фото, адрес или встречу — зажмите сообщение и нажмите «Пожаловаться», и расскажите взрослым.
-        </AppText>
+        <AppText variant="caption" style={{ flex: 1 }}>{tr("Если вам пишут грубости, просят фото, адрес или встречу — зажмите сообщение и нажмите «Пожаловаться», и расскажите взрослым.")}</AppText>
       </View>
 
       <Button
-        label={group ? "Выйти из группы" : "Удалить чат"}
+        label={group ? tr("Выйти из группы") : tr("Удалить чат")}
         variant="danger"
         icon={group ? "exit-outline" : "trash-outline"}
         onPress={leave}

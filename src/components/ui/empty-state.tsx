@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { color, radius, space } from "../../lib/theme";
 import { AppText } from "./app-text";
 import { Button } from "./button";
+import { tr } from "../../lib/i18n";
 
 type Props = {
   icon: IconName;
@@ -44,9 +45,9 @@ export function ErrorState({ onRetry, text }: { onRetry?: () => void; text?: str
     <EmptyState
       tone="error"
       icon="cloud-offline-outline"
-      title="Не удалось загрузить"
-      text={text ?? "Проверьте интернет и попробуйте ещё раз."}
-      action={onRetry ? "Повторить" : undefined}
+      title={tr("Не удалось загрузить")}
+      text={text ?? tr("Проверьте интернет и попробуйте ещё раз.")}
+      action={onRetry ? tr("Повторить") : undefined}
       onAction={onRetry}
     />
   );

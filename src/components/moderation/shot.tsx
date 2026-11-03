@@ -2,6 +2,7 @@ import { Icon } from "../icon";
 import { Image, StyleSheet, View } from "react-native";
 import { color, radius, space } from "../../lib/theme";
 import { AppText } from "../ui/app-text";
+import { tr } from "../../lib/i18n";
 
 /** Фото 3:4 с подписью сверху («До», «После»); если фото нет — заглушка. */
 export function Shot({ label, uri }: { label: string; uri?: string | null }) {
@@ -15,7 +16,7 @@ export function Shot({ label, uri }: { label: string; uri?: string | null }) {
       ) : (
         <View style={[s.photo, s.noPhoto]}>
           <Icon name="image-outline" size={24} color={color.faint} />
-          <AppText variant="caption">Нет фото</AppText>
+          <AppText variant="caption">{tr("Нет фото")}</AppText>
         </View>
       )}
     </View>

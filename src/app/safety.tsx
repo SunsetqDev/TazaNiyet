@@ -8,6 +8,7 @@ import { Screen } from "../components/ui/screen";
 import { TextField } from "../components/ui/text-field";
 import { supabase } from "../lib/supabase";
 import { color, radius, space } from "../lib/theme";
+import { tr, trs } from "../lib/i18n";
 
 export default function SafetyScreen() {
   const router = useRouter();
@@ -24,15 +25,15 @@ export default function SafetyScreen() {
 
   const save = async () => {
     if (!valid) {
-      Alert.alert("Укажите год рождения", "Например: 2010");
+      Alert.alert(tr("Укажите год рождения"), tr("Например: 2010"));
       return;
     }
     if (minor && (!parentName.trim() || !parentContact.trim())) {
-      Alert.alert("Нужны данные родителя", "Укажите имя и телефон или почту родителя.");
+      Alert.alert(tr("Нужны данные родителя"), tr("Укажите имя и телефон или почту родителя."));
       return;
     }
     if (!agree) {
-      Alert.alert("Нужно согласие", "Примите политику конфиденциальности.");
+      Alert.alert(tr("Нужно согласие"), tr("Примите политику конфиденциальности."));
       return;
     }
     setSaving(true);
@@ -43,36 +44,29 @@ export default function SafetyScreen() {
     });
     setSaving(false);
     if (error) {
-      Alert.alert("Ошибка", error.message);
+      Alert.alert(tr("Ошибка"), trs(error.message));
       return;
     }
     router.replace("/");
   };
 
   return (
-    <Screen bottomInset footer={<Button label="Продолжить" onPress={save} loading={saving} />}>
+    <Screen bottomInset footer={<Button label={tr("Продолжить")} onPress={save} loading={saving} />}>
       <View style={s.icon}>
         <Icon name="shield-checkmark-outline" size={28} color={color.forest} />
       </View>
-      <AppText variant="h1">Безопасность</AppText>
-      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x6 }}>
-        Нам нужно знать возраст, чтобы защитить школьников. Эти данные видят только проверяющие.
-      </AppText>
+      <AppText variant="h1">{tr("Безопасность")}</AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x6 }}>{tr("Нам нужно знать возраст, чтобы защитить школьников. Эти данные видят только проверяющие.")}</AppText>
 
-      <TextField label="Год рождения" placeholder="Например: 2010" keyboardType="number-pad" maxLength={4} value={year} onChangeText={setYear} />
+      <TextField label={tr("Год рождения")} placeholder={tr("Например: 2010")} keyboardType="number-pad" maxLength={4} value={year} onChangeText={setYear} />
 
       {minor && (
         <View style={s.box}>
-          <AppText variant="h3" color={color.warn}>
-            Нужно согласие родителей
-          </AppText>
-          <AppText variant="body" color={color.warn} style={{ marginTop: space.x1, marginBottom: space.x4 }}>
-            Вам 14 лет или меньше. Укажите родителя или законного представителя. Проверяющий свяжется с ним, и после
-            подтверждения вы сможете отправлять задания.
-          </AppText>
-          <TextField label="Имя родителя" placeholder="Например: Айгуль Серикова" value={parentName} onChangeText={setParentName} />
+          <AppText variant="h3" color={color.warn}>{tr("Нужно согласие родителей")}</AppText>
+          <AppText variant="body" color={color.warn} style={{ marginTop: space.x1, marginBottom: space.x4 }}>{tr("Вам 14 лет или меньше. Укажите родителя или законного представителя. Проверяющий свяжется с ним, и после подтверждения вы сможете отправлять задания.")}</AppText>
+          <TextField label={tr("Имя родителя")} placeholder={tr("Например: Айгуль Серикова")} value={parentName} onChangeText={setParentName} />
           <TextField
-            label="Телефон или почта родителя"
+            label={tr("Телефон или почта родителя")}
             placeholder="+7 700 000 00 00"
             autoCapitalize="none"
             value={parentContact}
@@ -83,11 +77,9 @@ export default function SafetyScreen() {
 
       <Pressable style={s.agreeRow} onPress={() => setAgree(!agree)} hitSlop={6}>
         <View style={[s.check, agree && s.checkOn]}>{agree && <Icon name="checkmark" size={18} color={color.lime} />}</View>
-        <AppText variant="body" style={{ flex: 1 }}>
-          Я принимаю политику конфиденциальности
-        </AppText>
+        <AppText variant="body" style={{ flex: 1 }}>{tr("Я принимаю политику конфиденциальности")}</AppText>
       </Pressable>
-      <Button label="Читать политику" variant="ghost" onPress={() => router.push("/privacy")} style={{ alignSelf: "flex-start", paddingHorizontal: 0 }} />
+      <Button label={tr("Читать политику")} variant="ghost" onPress={() => router.push("/privacy")} style={{ alignSelf: "flex-start", paddingHorizontal: 0 }} />
     </Screen>
   );
 }

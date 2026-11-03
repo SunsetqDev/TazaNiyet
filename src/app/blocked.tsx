@@ -11,6 +11,7 @@ import { SkeletonCard } from "../components/ui/skeleton";
 import { chatError } from "../lib/chat";
 import { supabase } from "../lib/supabase";
 import { color, font, space } from "../lib/theme";
+import { tr } from "../lib/i18n";
 
 type Blocked = { id: string; name: string };
 
@@ -34,13 +35,13 @@ export default function BlockedScreen() {
   );
 
   const unblock = (b: Blocked) =>
-    Alert.alert("Разблокировать?", `${b.name} снова сможет писать вам.`, [
-      { text: "Отмена", style: "cancel" },
+    Alert.alert(tr("Разблокировать?"), tr("{0} снова сможет писать вам.", b.name), [
+      { text: tr("Отмена"), style: "cancel" },
       {
-        text: "Разблокировать",
+        text: tr("Разблокировать"),
         onPress: async () => {
           const { error } = await supabase.rpc("unblock_user", { p_user: b.id });
-          if (error) Alert.alert("Не получилось", chatError(error));
+          if (error) Alert.alert(tr("Не получилось"), chatError(error));
           load();
         },
       },
@@ -49,13 +50,11 @@ export default function BlockedScreen() {
   return (
     <Screen bottomInset>
       <BackButton />
-      <AppText variant="h1" style={{ marginTop: space.x4, marginBottom: space.x4 }}>
-        Заблокированные
-      </AppText>
+      <AppText variant="h1" style={{ marginTop: space.x4, marginBottom: space.x4 }}>{tr("Заблокированные")}</AppText>
       {loading && <SkeletonCard height={160} />}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && list.length === 0 && (
-        <EmptyState icon="ban-outline" title="Никого нет" text="Заблокировать участника можно в настройках личного чата." />
+        <EmptyState icon="ban-outline" title={tr("Никого нет")} text={tr("Заблокировать участника можно в настройках личного чата.")} />
       )}
       {!loading && !error && list.length > 0 && (
         <Card style={{ paddingVertical: 0 }}>
@@ -66,7 +65,7 @@ export default function BlockedScreen() {
                 {b.name}
               </AppText>
               <Pressable onPress={() => unblock(b)} hitSlop={10}>
-                <AppText style={s.action}>Разблокировать</AppText>
+                <AppText style={s.action}>{tr("Разблокировать")}</AppText>
               </Pressable>
             </View>
           ))}

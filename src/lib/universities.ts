@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 /** Строка таблицы universities. */
 export type Uni = {
   id: number;
@@ -15,7 +16,7 @@ export type Uni = {
   photo_credit: string | null;
 };
 
-export const uniTypeLabel = (type: string) => (type === "college" ? "Колледж" : "Университет");
+export const uniTypeLabel = (type: string) => (type === "college" ? tr("Колледж") : tr("Университет"));
 
 /** programs хранится строкой через запятую. */
 export const uniPrograms = (u: Uni) =>

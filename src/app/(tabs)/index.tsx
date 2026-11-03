@@ -26,6 +26,7 @@ import { distanceM, formatDistance, type MapTask } from "../../lib/spot-tasks";
 import { subscribeMessages } from "../../lib/chat";
 import { supabase } from "../../lib/supabase";
 import { categoryTint, color, font, radius, space } from "../../lib/theme";
+import { tr, lang } from "../../lib/i18n";
 
 type Task = {
   id: number;
@@ -44,23 +45,23 @@ const TYPES_FOR: Record<string, string[]> = {
 };
 
 const CATS = [
-  { k: "all", label: "Все" },
-  { k: "clean", label: "Чистота" },
-  { k: "trees", label: "Деревья" },
-  { k: "recycle", label: "Переработка" },
-  { k: "water", label: "Вода" },
-  { k: "edu", label: "Просвещение" },
-  { k: "animals", label: "Животные" },
+  { k: "all", label: tr("Все") },
+  { k: "clean", label: tr("Чистота") },
+  { k: "trees", label: tr("Деревья") },
+  { k: "recycle", label: tr("Переработка") },
+  { k: "water", label: tr("Вода") },
+  { k: "edu", label: tr("Просвещение") },
+  { k: "animals", label: tr("Животные") },
 ];
 
 const TIPS = [
-  "Одна пластиковая бутылка разлагается более 400 лет. Многоразовая бутылка экономит сотни одноразовых.",
-  "Закрытый кран при чистке зубов экономит несколько литров воды за раз.",
-  "Одно взрослое дерево за год поглощает заметное количество углекислого газа и даёт тень в жару.",
-  "Бумагу можно переработать несколько раз. Сдавайте макулатуру, а не выбрасывайте.",
-  "Батарейки нельзя выбрасывать в обычный мусор: в них тяжёлые металлы. Сдавайте их в пункты приёма.",
-  "Сжигание пластика выделяет вредные вещества. Лучше сдать его на переработку.",
-  "Кормушка для птиц зимой помогает им пережить холода, но корм нужно подсыпать регулярно.",
+  tr("Одна пластиковая бутылка разлагается более 400 лет. Многоразовая бутылка экономит сотни одноразовых."),
+  tr("Закрытый кран при чистке зубов экономит несколько литров воды за раз."),
+  tr("Одно взрослое дерево за год поглощает заметное количество углекислого газа и даёт тень в жару."),
+  tr("Бумагу можно переработать несколько раз. Сдавайте макулатуру, а не выбрасывайте."),
+  tr("Батарейки нельзя выбрасывать в обычный мусор: в них тяжёлые металлы. Сдавайте их в пункты приёма."),
+  tr("Сжигание пластика выделяет вредные вещества. Лучше сдать его на переработку."),
+  tr("Кормушка для птиц зимой помогает им пережить холода, но корм нужно подсыпать регулярно."),
 ];
 
 // появление блоков — только при первом показе экрана, не больше 5 шагов
@@ -235,7 +236,13 @@ export default function TasksScreen() {
         setError(error.message);
         setTasks([]);
       } else {
-        setTasks(data as Task[]);
+        // казахский текст задания, если выбран казахский (колонки title_kk / description_kk)
+        const kk = lang() === "kk";
+        setTasks(
+          (data as (Task & { title_kk?: string | null; description_kk?: string | null })[]).map((t) =>
+            kk ? { ...t, title: t.title_kk || t.title, description: t.description_kk || t.description } : t
+          )
+        );
       }
       setLoading(false);
     };
@@ -263,7 +270,7 @@ export default function TasksScreen() {
               <Icon name="location-outline" size={14} color={color.muted} />
               {ready ? (
                 <AppText variant="caption" numberOfLines={1} style={{ flexShrink: 1 }}>
-                  {placeName || region} · <Text style={s.change}>изменить</Text>
+                  {placeName || region} · <Text style={s.change}>{tr("изменить")}</Text>
                 </AppText>
               ) : (
                 <Skeleton width={140} height={12} />
@@ -273,9 +280,8 @@ export default function TasksScreen() {
               variant="h1"
               numberOfLines={2}
               style={{ marginTop: space.x1 }}
-              onLongPress={__DEV__ ? () => setCelebrate({ gained: 50, rank: { name: "Побег", icon: "🌿" } }) : undefined}
-            >
-              Привет, {look.nickname || name || "друг"}
+              onLongPress={__DEV__ ? () => setCelebrate({ gained: 50, rank: { name: tr("Побег"), icon: "🌿" } }) : undefined}
+            >{tr("Привет,")}{" "}{look.nickname || name || tr("друг")}
             </AppText>
           </View>
           <PressScale onPress={() => router.push("/chats")} scaleTo={0.92} style={s.chatBtn}>
@@ -295,12 +301,8 @@ export default function TasksScreen() {
           <Animated.View entering={enter(1)} style={s.warn}>
             <Icon name="shield-checkmark-outline" size={22} color={color.warn} />
             <View style={{ flex: 1 }}>
-              <AppText variant="bodyStrong" color={color.warn}>
-                Ждём согласие родителей
-              </AppText>
-              <AppText variant="body" color={color.warn}>
-                Пока проверяющий не подтвердит согласие, отправлять задания нельзя.
-              </AppText>
+              <AppText variant="bodyStrong" color={color.warn}>{tr("Ждём согласие родителей")}</AppText>
+              <AppText variant="body" color={color.warn}>{tr("Пока проверяющий не подтвердит согласие, отправлять задания нельзя.")}</AppText>
             </View>
           </Animated.View>
         )}
@@ -310,12 +312,12 @@ export default function TasksScreen() {
             <Icon name="warning-outline" size={22} color={color.danger} />
             <View style={{ flex: 1 }}>
               <AppText variant="bodyStrong" color={color.danger}>
-                {penalties >= 3 ? "Аккаунт могут удалить" : "Последнее предупреждение"}
+                {penalties >= 3 ? tr("Аккаунт могут удалить") : tr("Последнее предупреждение")}
               </AppText>
               <AppText variant="body" color={color.danger}>
                 {penalties >= 3
-                  ? `Нарушений («Обман») за 90 дней: ${penalties}. Модератор может удалить аккаунт вместе с очками и заданиями.`
-                  : "Модератор дважды отметил обман за 90 дней. Ещё одно нарушение — и аккаунт могут удалить вместе с очками."}
+                  ? tr("Нарушений («Обман») за 90 дней: {0}. Модератор может удалить аккаунт вместе с очками и заданиями.", penalties)
+                  : tr("Модератор дважды отметил обман за 90 дней. Ещё одно нарушение — и аккаунт могут удалить вместе с очками.")}
               </AppText>
             </View>
           </Animated.View>
@@ -335,8 +337,8 @@ export default function TasksScreen() {
               <Icon name="camera-outline" size={26} color={color.forest} />
             </IconBlob>
             <View style={{ flex: 1 }}>
-              <AppText variant="h3">Сообщить о загрязнении</AppText>
-              <AppText variant="caption">Фото и место — после проверки станет заданием на карте</AppText>
+              <AppText variant="h3">{tr("Сообщить о загрязнении")}</AppText>
+              <AppText variant="caption">{tr("Фото и место — после проверки станет заданием на карте")}</AppText>
             </View>
             <Icon name="chevron-forward" size={20} color={color.faint} />
           </PressScale>
@@ -344,13 +346,13 @@ export default function TasksScreen() {
 
         {(myTask || nearby.length > 0) && (
           <Animated.View entering={enter(2)}>
-            <SectionHeader title="Рядом с вами" action="Открыть карту" onAction={() => router.push("/map")} />
+            <SectionHeader title={tr("Рядом с вами")} action={tr("Открыть карту")} onAction={() => router.push("/map")} />
             <Card style={{ paddingVertical: space.x1 }}>
               {myTask && (
                 <ListRow
                   first
                   title={myTask.title}
-                  subtitle={myTask.status === "under_review" ? "Ваш результат на проверке" : "Вы убираете это место"}
+                  subtitle={myTask.status === "under_review" ? tr("Ваш результат на проверке") : tr("Вы убираете это место")}
                   onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(myTask.id) } })}
                   leading={
                     <RowIcon tint={color.lime}>
@@ -381,7 +383,7 @@ export default function TasksScreen() {
 
         {(taskOfDay || (loading && ready)) && (
           <Animated.View entering={enter(2)}>
-            <SectionHeader title="Задание дня" hint="обновится завтра" />
+            <SectionHeader title={tr("Задание дня")} hint={tr("обновится завтра")} />
             {taskOfDay ? (
               <Card onPress={() => open(taskOfDay)}>
                 <View style={s.dayTop}>
@@ -398,9 +400,9 @@ export default function TasksScreen() {
                 <View style={s.dayBottom}>
                   <View style={s.dayHint}>
                     <Icon name="camera-outline" size={16} color={color.muted} />
-                    <AppText variant="caption">фото до и после</AppText>
+                    <AppText variant="caption">{tr("фото до и после")}</AppText>
                   </View>
-                  <Button label={`+${taskOfDay.points} TZ · Начать`} onPress={() => open(taskOfDay)} style={s.dayBtn} />
+                  <Button label={tr("+{0} TZ · Начать", taskOfDay.points)} onPress={() => open(taskOfDay)} style={s.dayBtn} />
                 </View>
               </Card>
             ) : (
@@ -410,7 +412,7 @@ export default function TasksScreen() {
         )}
 
         <Animated.View entering={enter(3)}>
-          <SectionHeader title="Все задания" hint={!loading && !error ? `${shown.length}` : undefined} />
+          <SectionHeader title={tr("Все задания")} hint={!loading && !error ? `${shown.length}` : undefined} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -433,14 +435,14 @@ export default function TasksScreen() {
           {!loading && !error && tasks.length === 0 && (
             <EmptyState
               icon="leaf-outline"
-              title="Задания скоро появятся"
-              text="Для вашего места пока нет заданий. Загляните позже или выберите другое место."
-              action="Изменить место"
+              title={tr("Задания скоро появятся")}
+              text={tr("Для вашего места пока нет заданий. Загляните позже или выберите другое место.")}
+              action={tr("Изменить место")}
               onAction={() => router.push("/place")}
             />
           )}
           {!loading && !error && tasks.length > 0 && shown.length === 0 && (
-            <EmptyState icon="search-outline" title="В этой категории пусто" text="Выберите другую категорию." />
+            <EmptyState icon="search-outline" title={tr("В этой категории пусто")} text={tr("Выберите другую категорию.")} />
           )}
 
           {!loading && !error && shown.length > 0 && (
@@ -464,21 +466,15 @@ export default function TasksScreen() {
 
         {stats && (
           <Card variant="sand" style={s.impact}>
-            <AppText variant="overline" color={color.ink}>
-              Вместе мы
-            </AppText>
+            <AppText variant="overline" color={color.ink}>{tr("Вместе мы")}</AppText>
             <View style={s.impactRow}>
               <View style={{ flex: 1 }}>
                 <CountUp value={stats.done} style={s.impactNum} />
-                <AppText variant="caption" color={color.ink}>
-                  заданий выполнено
-                </AppText>
+                <AppText variant="caption" color={color.ink}>{tr("заданий выполнено")}</AppText>
               </View>
               <View style={{ flex: 1 }}>
                 <CountUp value={stats.people} style={s.impactNum} />
-                <AppText variant="caption" color={color.ink}>
-                  участников
-                </AppText>
+                <AppText variant="caption" color={color.ink}>{tr("участников")}</AppText>
               </View>
             </View>
           </Card>
@@ -487,9 +483,7 @@ export default function TasksScreen() {
         <View style={s.tip}>
           <View style={s.tipHead}>
             <Icon name="bulb-outline" size={16} color={color.forest} />
-            <AppText variant="overline" color={color.forest}>
-              Эко-факт дня
-            </AppText>
+            <AppText variant="overline" color={color.forest}>{tr("Эко-факт дня")}</AppText>
           </View>
           <AppText variant="body">{tip}</AppText>
         </View>

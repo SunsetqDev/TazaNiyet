@@ -15,6 +15,7 @@ import { avatarUrl } from "../lib/avatar";
 import { pickPhoto, takePhoto, uploadPhoto, type Photo } from "../lib/photos";
 import { supabase } from "../lib/supabase";
 import { color as palette, font, radius, space } from "../lib/theme";
+import { tr, trs } from "../lib/i18n";
 
 const NICK_RE = /^[A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі0-9_.-]+$/;
 
@@ -67,11 +68,11 @@ export default function EditProfileScreen() {
     nick.length === 0
       ? null
       : nick.length < 3
-      ? "Минимум 3 символа"
+      ? tr("Минимум 3 символа")
       : nick.length > 20
-      ? "Максимум 20 символов"
+      ? tr("Максимум 20 символов")
       : !NICK_RE.test(nick)
-      ? "Только буквы, цифры и символы _ . -"
+      ? tr("Только буквы, цифры и символы _ . -")
       : null;
 
   // проверка на сервере (запрещённые слова, занятость) — через полсекунды после ввода
@@ -103,7 +104,7 @@ export default function EditProfileScreen() {
 
   const save = async () => {
     if (nickError) {
-      Alert.alert("Проверьте ник", nickError);
+      Alert.alert(tr("Проверьте ник"), nickError);
       return;
     }
     if (checking) return;
@@ -121,14 +122,14 @@ export default function EditProfileScreen() {
       if (error) throw error;
       if (data !== "ok") {
         if (String(data).toLowerCase().includes("ник")) setServerNickError(String(data));
-        Alert.alert("Не получилось", String(data));
+        Alert.alert(tr("Не получилось"), trs(String(data)));
         return;
       }
       // старое фото больше не нужно — удаляем из хранилища
       if (avatarPath !== null && photoPath) await supabase.storage.from("avatars").remove([photoPath]);
       router.back();
     } catch (e: any) {
-      Alert.alert("Не удалось сохранить", e?.message ?? "Проверьте интернет и попробуйте снова.");
+      Alert.alert(tr("Не удалось сохранить"), trs(e?.message) ?? tr("Проверьте интернет и попробуйте снова."));
     } finally {
       setSaving(false);
     }
@@ -148,31 +149,31 @@ export default function EditProfileScreen() {
   }
 
   return (
-    <Screen bottomInset footer={<Button label="Сохранить" onPress={save} loading={saving} disabled={!!nickError} />}>
+    <Screen bottomInset footer={<Button label={tr("Сохранить")} onPress={save} loading={saving} disabled={!!nickError} />}>
       <BackButton />
-      <AppText variant="h1">Мой профиль</AppText>
+      <AppText variant="h1">{tr("Мой профиль")}</AppText>
 
       <View style={s.preview}>
         <Avatar name={nick || realName} emoji={emoji} color={color} photo={shownPhoto} size={112} />
         <AppText variant="h2" style={{ marginTop: space.x3 }}>
-          {nick || realName || "Без имени"}
+          {nick || realName || tr("Без имени")}
         </AppText>
       </View>
 
-      <SectionHeader title="Фото профиля" hint="видно только вам" />
+      <SectionHeader title={tr("Фото профиля")} hint={tr("видно только вам")} />
       <View style={s.photoRow}>
         <PressScale onPress={() => choosePhoto("camera")} scaleTo={0.96} style={s.photoBtn}>
           <Icon name="camera-outline" size={22} color={palette.forest} />
-          <AppText style={s.photoBtnText}>Камера</AppText>
+          <AppText style={s.photoBtnText}>{tr("Камера")}</AppText>
         </PressScale>
         <PressScale onPress={() => choosePhoto("gallery")} scaleTo={0.96} style={s.photoBtn}>
           <Icon name="images-outline" size={22} color={palette.forest} />
-          <AppText style={s.photoBtnText}>Галерея</AppText>
+          <AppText style={s.photoBtnText}>{tr("Галерея")}</AppText>
         </PressScale>
       </View>
       {shownPhoto ? (
         <Button
-          label="Убрать фото"
+          label={tr("Убрать фото")}
           variant="danger"
           onPress={() => {
             setNewPhoto(null);
@@ -184,19 +185,19 @@ export default function EditProfileScreen() {
 
       <View style={{ marginTop: space.x5 }}>
         <TextField
-          label="Никнейм"
-          placeholder="Например: eco_hero"
+          label={tr("Никнейм")}
+          placeholder={tr("Например: eco_hero")}
           autoCapitalize="none"
           autoCorrect={false}
           maxLength={20}
           value={nickname}
           onChangeText={setNickname}
           error={nickError}
-          hint={checking ? "Проверяем ник…" : "Его будут видеть другие участники в рейтинге. Настоящее имя остаётся скрытым."}
+          hint={checking ? tr("Проверяем ник…") : tr("Его будут видеть другие участники в рейтинге. Настоящее имя остаётся скрытым.")}
         />
       </View>
 
-      <SectionHeader title={shownPhoto ? "Аватар без фото" : "Аватар"} hint={shownPhoto ? "если уберёте фото" : undefined} />
+      <SectionHeader title={shownPhoto ? tr("Аватар без фото") : tr("Аватар")} hint={shownPhoto ? tr("если уберёте фото") : undefined} />
       <View style={s.grid}>
         <Pressable style={[s.cell, emoji === null && s.cellOn]} onPress={() => setEmoji(null)}>
           <AppText style={s.cellLetter}>{(nick || realName || "?").charAt(0).toUpperCase()}</AppText>
@@ -208,7 +209,7 @@ export default function EditProfileScreen() {
         ))}
       </View>
 
-      <SectionHeader title="Цвет фона" />
+      <SectionHeader title={tr("Цвет фона")} />
       <View style={s.grid}>
         {AVATAR_COLORS.map((c) => (
           <Pressable key={c} onPress={() => setColor(c)} style={[s.colorRing, color === c && s.colorRingOn]}>

@@ -13,6 +13,7 @@ import { SkeletonCard } from "../components/ui/skeleton";
 import { chatTime, subscribeMessages, type ChatListItem } from "../lib/chat";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
+import { tr } from "../lib/i18n";
 
 export default function ChatsScreen() {
   const router = useRouter();
@@ -54,19 +55,19 @@ export default function ChatsScreen() {
         <BackButton />
         <View style={{ flex: 1 }} />
         <Pressable onPress={() => router.push("/blocked")} hitSlop={10}>
-          <AppText variant="caption">Заблокированные</AppText>
+          <AppText variant="caption">{tr("Заблокированные")}</AppText>
         </Pressable>
       </View>
-      <AppText variant="h1">Сообщения</AppText>
+      <AppText variant="h1">{tr("Сообщения")}</AppText>
 
       <View style={s.actions}>
         <PressScale onPress={() => router.push("/new-chat")} scaleTo={0.97} style={[s.action, s.actionMain]}>
           <Icon name="create-outline" size={20} color={color.lime} />
-          <AppText style={s.actionMainText}>Новый чат</AppText>
+          <AppText style={s.actionMainText}>{tr("Новый чат")}</AppText>
         </PressScale>
         <PressScale onPress={() => router.push({ pathname: "/new-chat", params: { group: "1" } })} scaleTo={0.97} style={s.action}>
           <Icon name="people-outline" size={20} color={color.forest} />
-          <AppText style={s.actionText}>Создать группу</AppText>
+          <AppText style={s.actionText}>{tr("Создать группу")}</AppText>
         </PressScale>
       </View>
 
@@ -75,8 +76,8 @@ export default function ChatsScreen() {
       {!loading && !error && chats.length === 0 && (
         <EmptyState
           icon="chatbubbles-outline"
-          title="Пока нет чатов"
-          text="Найдите участника по нику или соберите группу друзей для общей уборки."
+          title={tr("Пока нет чатов")}
+          text={tr("Найдите участника по нику или соберите группу друзей для общей уборки.")}
         />
       )}
       {!loading && !error && chats.length > 0 && (
@@ -103,7 +104,7 @@ export default function ChatsScreen() {
                 </View>
                 <View style={s.rowTop}>
                   <AppText variant="caption" numberOfLines={1} style={{ flex: 1 }}>
-                    {c.last_body ? `${c.last_is_mine ? "Вы: " : ""}${c.last_body}` : c.kind === "group" ? `${c.members} участн.` : "Нет сообщений"}
+                    {c.last_body ? `${c.last_is_mine ? tr("Вы: ") : ""}${c.last_body}` : c.kind === "group" ? tr("{0} участн.", c.members) : tr("Нет сообщений")}
                   </AppText>
                   {c.unread > 0 && (
                     <View style={s.badge}>

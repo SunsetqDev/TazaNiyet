@@ -14,6 +14,7 @@ import { getCurrentCoords, KZ_CENTER, KZ_ZOOM, REPORT_CATEGORIES, reportCategory
 import { DIFFICULTY, distanceM, formatDistance, openRoute, type MapTask } from "../../lib/spot-tasks";
 import { supabase } from "../../lib/supabase";
 import { color, font, radius, space } from "../../lib/theme";
+import { tr } from "../../lib/i18n";
 
 type Me = { lat: number; lng: number } | null;
 
@@ -114,9 +115,9 @@ export default function MapScreen() {
       <View style={[s.top, { paddingTop: insets.top + space.x2 }]} pointerEvents="box-none">
         <View style={s.titleBar}>
           <View style={{ flex: 1 }}>
-            <AppText variant="h2">Карта заданий</AppText>
+            <AppText variant="h2">{tr("Карта заданий")}</AppText>
             <AppText variant="caption">
-              {loading ? "Загружаем…" : available > 0 ? `Доступно мест для уборки: ${available}` : "Свободных мест пока нет"}
+              {loading ? tr("Загружаем…") : available > 0 ? tr("Доступно мест для уборки: {0}", available) : tr("Свободных мест пока нет")}
             </AppText>
           </View>
           <PressScale onPress={load} scaleTo={0.9} style={s.iconBtn}>
@@ -124,7 +125,7 @@ export default function MapScreen() {
           </PressScale>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.gutter }} style={{ marginTop: space.x2 }}>
-          <Chip label="Все" active={cat === "all"} onPress={() => setCat("all")} />
+          <Chip label={tr("Все")} active={cat === "all"} onPress={() => setCat("all")} />
           {REPORT_CATEGORIES.map((c) => (
             <Chip key={c.k} label={c.label} active={cat === c.k} onPress={() => setCat(c.k)} />
           ))}
@@ -142,7 +143,7 @@ export default function MapScreen() {
         <View style={s.center} pointerEvents="none">
           <View style={s.pill}>
             <ActivityIndicator color={color.forest} />
-            <AppText variant="bodyStrong">Загружаем задания…</AppText>
+            <AppText variant="bodyStrong">{tr("Загружаем задания…")}</AppText>
           </View>
         </View>
       )}
@@ -150,11 +151,9 @@ export default function MapScreen() {
       {!loading && error && (
         <View style={s.bottom}>
           <View style={s.sheet}>
-            <AppText variant="h3">Не удалось загрузить карту заданий</AppText>
-            <AppText variant="body" color={color.muted}>
-              Проверьте интернет и попробуйте ещё раз.
-            </AppText>
-            <Button label="Повторить" variant="secondary" onPress={load} style={{ marginTop: space.x3 }} />
+            <AppText variant="h3">{tr("Не удалось загрузить карту заданий")}</AppText>
+            <AppText variant="body" color={color.muted}>{tr("Проверьте интернет и попробуйте ещё раз.")}</AppText>
+            <Button label={tr("Повторить")} variant="secondary" onPress={load} style={{ marginTop: space.x3 }} />
           </View>
         </View>
       )}
@@ -162,10 +161,8 @@ export default function MapScreen() {
       {!loading && !error && !selected && shown.length === 0 && (
         <View style={s.bottom}>
           <View style={s.sheet}>
-            <AppText variant="h3">{tasks.length === 0 ? "На карте пока нет заданий" : "В этой категории пусто"}</AppText>
-            <AppText variant="body" color={color.muted}>
-              Задания появляются из заявок жителей после проверки. Заметили мусор — нажмите ➕ внизу экрана.
-            </AppText>
+            <AppText variant="h3">{tasks.length === 0 ? tr("На карте пока нет заданий") : tr("В этой категории пусто")}</AppText>
+            <AppText variant="body" color={color.muted}>{tr("Задания появляются из заявок жителей после проверки. Заметили мусор — нажмите ➕ внизу экрана.")}</AppText>
           </View>
         </View>
       )}
@@ -174,9 +171,7 @@ export default function MapScreen() {
         <View style={s.bottom}>
           <PressScale onPress={() => findMe(true)} scaleTo={0.98} style={s.hint}>
             <Icon name="navigate-outline" size={18} color={color.forest} />
-            <AppText variant="body" style={{ flex: 1 }}>
-              Разрешите геолокацию, чтобы видеть себя на карте и расстояние до мест
-            </AppText>
+            <AppText variant="body" style={{ flex: 1 }}>{tr("Разрешите геолокацию, чтобы видеть себя на карте и расстояние до мест")}</AppText>
           </PressScale>
         </View>
       )}
@@ -208,19 +203,17 @@ export default function MapScreen() {
               </PressScale>
             </View>
             {selected.status !== "available" && !selected.is_mine && (
-              <AppText variant="caption" style={{ marginTop: space.x2 }}>
-                Это место уже убирает другой участник.
-              </AppText>
+              <AppText variant="caption" style={{ marginTop: space.x2 }}>{tr("Это место уже убирает другой участник.")}</AppText>
             )}
             {selected.is_mine && (
               <AppText variant="caption" color={color.forest} style={{ marginTop: space.x2 }}>
-                {selected.status === "under_review" ? "Ваш результат на проверке." : "Это задание за вами."}
+                {selected.status === "under_review" ? tr("Ваш результат на проверке.") : tr("Это задание за вами.")}
               </AppText>
             )}
             <View style={s.actions}>
-              <Button label="Маршрут" icon="navigate-outline" variant="secondary" onPress={() => openRoute(selected.lat, selected.lng)} style={{ flex: 1 }} />
+              <Button label={tr("Маршрут")} icon="navigate-outline" variant="secondary" onPress={() => openRoute(selected.lat, selected.lng)} style={{ flex: 1 }} />
               <Button
-                label="Подробнее"
+                label={tr("Подробнее")}
                 onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(selected.id) } })}
                 style={{ flex: 1 }}
               />

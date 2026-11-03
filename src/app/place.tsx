@@ -10,7 +10,9 @@ import { SectionHeader } from "../components/ui/section-header";
 import { TextField } from "../components/ui/text-field";
 import { supabase } from "../lib/supabase";
 import { color, space } from "../lib/theme";
+import { tr, trs } from "../lib/i18n";
 
+// значения хранятся в профиле по-русски — переводим только подпись
 const REGIONS = [
   "Астана", "Алматы", "Шымкент",
   "Абайская область", "Акмолинская область", "Актюбинская область",
@@ -22,9 +24,9 @@ const REGIONS = [
 ];
 
 const TYPES = [
-  { key: "city", label: "Город" },
-  { key: "town", label: "Посёлок городского типа" },
-  { key: "village", label: "Аул / село" },
+  { key: "city", label: tr("Город") },
+  { key: "town", label: tr("Посёлок городского типа") },
+  { key: "village", label: tr("Аул / село") },
 ];
 
 export default function PlaceScreen() {
@@ -51,7 +53,7 @@ export default function PlaceScreen() {
 
   const save = async () => {
     if (!region || !type) {
-      Alert.alert("Выберите область и тип места");
+      Alert.alert(tr("Выберите область и тип места"));
       return;
     }
     setSaving(true);
@@ -68,37 +70,35 @@ export default function PlaceScreen() {
       .select();
     setSaving(false);
     if (error || !data || data.length === 0) {
-      Alert.alert("Ошибка", error ? error.message : "Профиль не найден");
+      Alert.alert(tr("Ошибка"), error ? trs(error.message) : tr("Профиль не найден"));
       return;
     }
     router.replace("/");
   };
 
   return (
-    <Screen bottomInset footer={<Button label="Продолжить" onPress={save} loading={saving} />}>
+    <Screen bottomInset footer={<Button label={tr("Продолжить")} onPress={save} loading={saving} />}>
       {/* при первом входе истории нет — кнопка «назад» нужна только при смене места с главной */}
       {router.canGoBack() && <BackButton />}
-      <AppText variant="h1">Где вы живёте?</AppText>
-      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1 }}>
-        Мы покажем задания, которые можно выполнить рядом с вами.
-      </AppText>
+      <AppText variant="h1">{tr("Где вы живёте?")}</AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1 }}>{tr("Мы покажем задания, которые можно выполнить рядом с вами.")}</AppText>
 
-      <SectionHeader title="1. Область" />
+      <SectionHeader title={tr("1. Область")} />
       <View style={s.wrap}>
         {REGIONS.map((r) => (
-          <Chip key={r} label={r} active={region === r} onPress={() => setRegion(r)} />
+          <Chip key={r} label={tr(r)} active={region === r} onPress={() => setRegion(r)} />
         ))}
       </View>
 
-      <SectionHeader title="2. Тип места" />
+      <SectionHeader title={tr("2. Тип места")} />
       <View style={s.wrap}>
         {TYPES.map((t) => (
           <Chip key={t.key} label={t.label} active={type === t.key} onPress={() => setType(t.key)} />
         ))}
       </View>
 
-      <SectionHeader title="3. Название" hint="по желанию" />
-      <TextField placeholder="Например: Актобе, аул Жайсан" value={placeName} onChangeText={setPlaceName} />
+      <SectionHeader title={tr("3. Название")} hint={tr("по желанию")} />
+      <TextField placeholder={tr("Например: Актобе, аул Жайсан")} value={placeName} onChangeText={setPlaceName} />
     </Screen>
   );
 }

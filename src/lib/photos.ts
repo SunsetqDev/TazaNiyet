@@ -2,6 +2,7 @@ import { decode } from "base64-arraybuffer";
 import * as ImagePicker from "expo-image-picker";
 import { Alert } from "react-native";
 import { supabase } from "./supabase";
+import { tr } from "./i18n";
 
 export type Photo = { uri: string; base64: string };
 
@@ -15,7 +16,7 @@ function toPhoto(result: ImagePicker.ImagePickerResult): Photo | null {
   if (result.canceled) return null;
   const asset = result.assets[0];
   if (!asset.base64 || asset.base64.length < 1000) {
-    Alert.alert("Фото не получилось", "Попробуйте ещё раз.");
+    Alert.alert(tr("Фото не получилось"), tr("Попробуйте ещё раз."));
     return null;
   }
   return { uri: asset.uri, base64: asset.base64 };
@@ -25,7 +26,7 @@ function toPhoto(result: ImagePicker.ImagePickerResult): Photo | null {
 export async function takePhoto(o?: PickOptions): Promise<Photo | null> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
   if (!perm.granted) {
-    Alert.alert("Нужен доступ к камере", "Разрешите камеру в настройках телефона.");
+    Alert.alert(tr("Нужен доступ к камере"), tr("Разрешите камеру в настройках телефона."));
     return null;
   }
   return toPhoto(await ImagePicker.launchCameraAsync({ ...OPTIONS, ...crop(o) }));
@@ -41,7 +42,7 @@ export async function uploadPhoto(bucket: string, photo: Photo, userId: string, 
   const path = `${userId}/${Date.now()}-${label}.jpg`;
   const bytes = decode(photo.base64);
   if (bytes.byteLength < 1000) {
-    throw new Error("Фото пустое. Сделайте его заново.");
+    throw new Error(tr("Фото пустое. Сделайте его заново."));
   }
   const { error } = await supabase.storage.from(bucket).upload(path, bytes, { contentType: "image/jpeg" });
   if (error) throw error;

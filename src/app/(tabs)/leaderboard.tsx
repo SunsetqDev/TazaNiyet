@@ -10,6 +10,7 @@ import { Skeleton, SkeletonCard } from "../../components/ui/skeleton";
 import { getRank } from "../../lib/ranks";
 import { supabase } from "../../lib/supabase";
 import { color, font, radius, space } from "../../lib/theme";
+import { tr } from "../../lib/i18n";
 
 type Board = { display_name: string; place: string | null; total: number; is_me: boolean };
 
@@ -30,7 +31,7 @@ function PodiumSpot({ item, place }: { item?: Board; place: 0 | 1 | 2 }) {
       </View>
       <AppText style={s.podiumName} numberOfLines={1}>
         {item.display_name}
-        {item.is_me ? " (вы)" : ""}
+        {item.is_me ? tr(" (вы)") : ""}
       </AppText>
       <AppText variant="caption">{item.total} TZ</AppText>
       <View style={[s.pedestal, { height: p.height, backgroundColor: p.bg }]}>
@@ -75,10 +76,8 @@ export default function LeaderboardScreen() {
     <Screen
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.forest]} tintColor={color.forest} />}
     >
-      <AppText variant="h1">Рейтинг</AppText>
-      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>
-        Лучшие участники по очкам TZ
-      </AppText>
+      <AppText variant="h1">{tr("Рейтинг")}</AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>{tr("Лучшие участники по очкам TZ")}</AppText>
 
       {loading ? (
         <SkeletonCard height={96} style={{ borderRadius: radius.hero }} />
@@ -86,9 +85,7 @@ export default function LeaderboardScreen() {
         <View style={s.hero}>
           {me ? (
             <>
-              <AppText variant="overline" color={color.lime}>
-                Ваше место
-              </AppText>
+              <AppText variant="overline" color={color.lime}>{tr("Ваше место")}</AppText>
               <View style={s.heroRow}>
                 <AppText style={s.heroPlace}>{myIndex + 1}</AppText>
                 <View style={{ flex: 1 }}>
@@ -96,19 +93,15 @@ export default function LeaderboardScreen() {
                     {me.total} TZ
                   </AppText>
                   <AppText variant="caption" color={color.onForestMuted}>
-                    {myIndex === 0 ? "Вы лидер — так держать" : `До ${myIndex} места осталось ${gap} TZ`}
+                    {myIndex === 0 ? tr("Вы лидер — так держать") : tr("До {0} места осталось {1} TZ", myIndex, gap)}
                   </AppText>
                 </View>
               </View>
             </>
           ) : (
             <>
-              <AppText variant="h3" color={color.onForest}>
-                Вас пока нет в рейтинге
-              </AppText>
-              <AppText variant="caption" color={color.onForestMuted} style={{ marginTop: 4 }}>
-                Выполните задание — после проверки вы появитесь в списке.
-              </AppText>
+              <AppText variant="h3" color={color.onForest}>{tr("Вас пока нет в рейтинге")}</AppText>
+              <AppText variant="caption" color={color.onForestMuted} style={{ marginTop: 4 }}>{tr("Выполните задание — после проверки вы появитесь в списке.")}</AppText>
             </>
           )}
         </View>
@@ -123,7 +116,7 @@ export default function LeaderboardScreen() {
       )}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && board.length === 0 && (
-        <EmptyState icon="trophy-outline" title="Пока никого" text="Выполните первое задание и станьте первым в рейтинге." />
+        <EmptyState icon="trophy-outline" title={tr("Пока никого")} text={tr("Выполните первое задание и станьте первым в рейтинге.")} />
       )}
 
       {!loading && !error && board.length > 0 && (
@@ -136,7 +129,7 @@ export default function LeaderboardScreen() {
 
       {!loading && !error && rest.length > 0 && (
         <>
-          <SectionHeader title="Остальные участники" />
+          <SectionHeader title={tr("Остальные участники")} />
           <View style={s.list}>
             {rest.map((r, i) => (
               <View key={i} style={[s.row, i > 0 && s.rowLine, r.is_me && s.rowMe]}>
@@ -145,7 +138,7 @@ export default function LeaderboardScreen() {
                 <View style={{ flex: 1 }}>
                   <AppText variant="bodyStrong" numberOfLines={1}>
                     {r.display_name}
-                    {r.is_me ? " (вы)" : ""}
+                    {r.is_me ? tr(" (вы)") : ""}
                   </AppText>
                   {r.place ? (
                     <AppText variant="caption" numberOfLines={1}>

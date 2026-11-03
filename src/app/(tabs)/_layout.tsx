@@ -4,6 +4,7 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PressScale } from "../../components/anim";
 import { color, font } from "../../lib/theme";
+import { tr } from "../../lib/i18n";
 
 // коробка иконки; библиотека по умолчанию даёт 24×24 — расширяем через tabBarIconStyle
 const BOX = { width: 40, height: 34 };
@@ -14,7 +15,7 @@ function TabIcon({ name, focused }: { name: IconName; focused: boolean }) {
     <View style={{ ...BOX, alignItems: "center", justifyContent: "center" }}>
       {focused ? (
         <IconBlob size={36} tint={color.lime}>
-          <Icon name={name} size={22} color={color.forest} />
+          <Icon name={name} size={22} color={color.onLime} />
         </IconBlob>
       ) : (
         <Icon name={name} size={22} color={color.onForestMuted} />
@@ -43,7 +44,7 @@ function ReportButton() {
           borderColor: color.forest,
         }}
       >
-        <Icon name="add" size={30} color={color.forest} />
+        <Icon name="add" size={30} color={color.onLime} />
       </PressScale>
     </View>
   );
@@ -79,11 +80,11 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11, marginTop: 2 },
       }}
     >
-      <Tabs.Screen name="index" options={tab("Задания", "leaf-outline", "leaf")} />
-      <Tabs.Screen name="map" options={tab("Карта", "map-outline", "map")} />
-      <Tabs.Screen name="new" options={{ title: "Сообщить", tabBarButton: () => <ReportButton /> }} />
-      <Tabs.Screen name="leaderboard" options={tab("Рейтинг", "trophy-outline", "trophy")} />
-      <Tabs.Screen name="profile" options={tab("Профиль", "person-outline", "person")} />
+      <Tabs.Screen name="index" options={tab(tr("Задания"), "leaf-outline", "leaf")} />
+      <Tabs.Screen name="map" options={tab(tr("Карта"), "map-outline", "map")} />
+      <Tabs.Screen name="new" options={{ title: tr("Сообщить"), tabBarButton: () => <ReportButton /> }} />
+      <Tabs.Screen name="leaderboard" options={tab(tr("Рейтинг"), "trophy-outline", "trophy")} />
+      <Tabs.Screen name="profile" options={tab(tr("Профиль"), "person-outline", "person")} />
     </Tabs>
   );
 }

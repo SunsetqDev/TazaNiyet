@@ -21,12 +21,13 @@ import { SkeletonCard } from "../components/ui/skeleton";
 import { TextField } from "../components/ui/text-field";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
+import { tr, trs, locale } from "../lib/i18n";
 
 const REASONS = [
-  "Фото «после» не показывает результат",
-  "Фото размытое или тёмное",
-  "Фото не по заданию",
-  "Нет фото «до» или «после»",
+  tr("Фото «после» не показывает результат"),
+  tr("Фото размытое или тёмное"),
+  tr("Фото не по заданию"),
+  tr("Нет фото «до» или «после»"),
 ];
 
 type Item = {
@@ -39,11 +40,11 @@ type Item = {
 
 // вкладки модерации: обычные задания, заявки о загрязнении, результаты уборки мест с карты, жалобы на сообщения, аккаунты на удаление
 const TABS = [
-  { k: "tasks", label: "Задания" },
-  { k: "reports", label: "Заявки" },
-  { k: "results", label: "Уборка" },
-  { k: "messages", label: "Жалобы" },
-  { k: "accounts", label: "Аккаунты" },
+  { k: "tasks", label: tr("Задания") },
+  { k: "reports", label: tr("Заявки") },
+  { k: "results", label: tr("Уборка") },
+  { k: "messages", label: tr("Жалобы") },
+  { k: "accounts", label: tr("Аккаунты") },
 ] as const;
 
 export default function ModeratorScreen() {
@@ -64,7 +65,7 @@ export default function ModeratorScreen() {
       .eq("status", "pending")
       .order("created_at", { ascending: true });
     if (error) {
-      Alert.alert("Ошибка", error.message);
+      Alert.alert(tr("Ошибка"), trs(error.message));
       setLoading(false);
       return;
     }
@@ -100,24 +101,24 @@ export default function ModeratorScreen() {
     });
     setBusy(null);
     if (error) {
-      Alert.alert("Ошибка", error.message);
+      Alert.alert(tr("Ошибка"), trs(error.message));
       return;
     }
     setRejectFor(null);
     setCustomReason("");
-    Alert.alert("Результат", String(data));
+    Alert.alert(tr("Результат"), trs(String(data)));
     load();
   };
 
   const fraud = (it: Item) => {
     const penalty = it.tasks?.points ?? 0;
     Alert.alert(
-      "Пометить как обман?",
-      `Заявка будет отклонена, у пользователя снимется ${penalty} TZ.`,
+      tr("Пометить как обман?"),
+      tr("Заявка будет отклонена, у пользователя снимется {0} TZ.", penalty),
       [
-        { text: "Отмена", style: "cancel" },
+        { text: tr("Отмена"), style: "cancel" },
         {
-          text: "Обман",
+          text: tr("Обман"),
           style: "destructive",
           onPress: async () => {
             setBusy(it.id);
@@ -127,10 +128,10 @@ export default function ModeratorScreen() {
             });
             setBusy(null);
             if (error) {
-              Alert.alert("Ошибка", error.message);
+              Alert.alert(tr("Ошибка"), trs(error.message));
               return;
             }
-            Alert.alert("Результат", String(data));
+            Alert.alert(tr("Результат"), trs(String(data)));
             load();
           },
         },
@@ -140,24 +141,24 @@ export default function ModeratorScreen() {
 
   const confirmConsent = async () => {
     if (!email.trim()) {
-      Alert.alert("Введите почту ребёнка");
+      Alert.alert(tr("Введите почту ребёнка"));
       return;
     }
     setConsentBusy(true);
     const { data, error } = await supabase.rpc("confirm_parent_consent", { p_email: email.trim() });
     setConsentBusy(false);
     if (error) {
-      Alert.alert("Ошибка", error.message);
+      Alert.alert(tr("Ошибка"), trs(error.message));
       return;
     }
-    Alert.alert("Результат", String(data));
+    Alert.alert(tr("Результат"), trs(String(data)));
     if (data === "Согласие подтверждено") setEmail("");
   };
 
   return (
     <Screen bottomInset>
       <BackButton />
-      <AppText variant="h1">Проверка заданий</AppText>
+      <AppText variant="h1">{tr("Проверка заданий")}</AppText>
 
       <View style={s.tabs}>
         {TABS.map((t) => (
@@ -173,28 +174,26 @@ export default function ModeratorScreen() {
       {tab === "tasks" && (
       <>
       <Card style={{ marginTop: space.x5 }}>
-        <AppText variant="h3">Согласие родителей</AppText>
-        <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>
-          Подтверждайте только после того, как связались с родителем или получили бумажное согласие.
-        </AppText>
+        <AppText variant="h3">{tr("Согласие родителей")}</AppText>
+        <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>{tr("Подтверждайте только после того, как связались с родителем или получили бумажное согласие.")}</AppText>
         <TextField
-          placeholder="Почта ребёнка (из регистрации)"
+          placeholder={tr("Почта ребёнка (из регистрации)")}
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
-        <Button label="Подтвердить согласие" variant="secondary" onPress={confirmConsent} loading={consentBusy} />
+        <Button label={tr("Подтвердить согласие")} variant="secondary" onPress={confirmConsent} loading={consentBusy} />
       </Card>
 
-      <SectionHeader title="Ожидают проверки" hint={loading ? undefined : String(items.length)} />
+      <SectionHeader title={tr("Ожидают проверки")} hint={loading ? undefined : String(items.length)} />
 
       {loading && (
         <View style={{ gap: space.x4 }}>
           <SkeletonCard height={320} />
         </View>
       )}
-      {!loading && items.length === 0 && <EmptyState icon="checkmark-done-outline" title="Все заявки проверены" text="Новые появятся здесь." />}
+      {!loading && items.length === 0 && <EmptyState icon="checkmark-done-outline" title={tr("Все заявки проверены")} text={tr("Новые появятся здесь.")} />}
 
       {!loading &&
         items.map((it) => {
@@ -207,21 +206,20 @@ export default function ModeratorScreen() {
                 </RowIcon>
                 <View style={{ flex: 1 }}>
                   <AppText variant="bodyStrong">{it.tasks?.title}</AppText>
-                  <AppText variant="caption">
-                    Заявка №{it.id} · {new Date(it.created_at).toLocaleString("ru-RU")}
+                  <AppText variant="caption">{tr("Заявка №")}{it.id} · {new Date(it.created_at).toLocaleString(locale())}
                   </AppText>
                 </View>
                 <AppText style={s.pts}>+{it.tasks?.points} TZ</AppText>
               </View>
 
               <View style={s.photos}>
-                <Shot label="До" uri={it.beforeUrl} />
-                <Shot label="После" uri={it.afterUrl} />
+                <Shot label={tr("До")} uri={it.beforeUrl} />
+                <Shot label={tr("После")} uri={it.afterUrl} />
               </View>
 
               <View style={s.row}>
                 <Button
-                  label={rejectFor === it.id ? "Отмена" : "Отклонить"}
+                  label={rejectFor === it.id ? tr("Отмена") : tr("Отклонить")}
                   variant="secondary"
                   disabled={isBusy}
                   onPress={() => {
@@ -230,14 +228,12 @@ export default function ModeratorScreen() {
                   }}
                   style={{ flex: 1 }}
                 />
-                <Button label="Принять" icon="checkmark" loading={isBusy} onPress={() => review(it.id, true)} style={{ flex: 1 }} />
+                <Button label={tr("Принять")} icon="checkmark" loading={isBusy} onPress={() => review(it.id, true)} style={{ flex: 1 }} />
               </View>
 
               {rejectFor === it.id && (
                 <View style={s.rejectBox}>
-                  <AppText variant="overline" style={{ marginBottom: space.x2 }}>
-                    Причина отказа — её увидит пользователь
-                  </AppText>
+                  <AppText variant="overline" style={{ marginBottom: space.x2 }}>{tr("Причина отказа — её увидит пользователь")}</AppText>
                   {REASONS.map((r) => (
                     <Pressable
                       key={r}
@@ -252,14 +248,14 @@ export default function ModeratorScreen() {
                     </Pressable>
                   ))}
                   <TextField
-                    placeholder="Или напишите свою причину"
+                    placeholder={tr("Или напишите свою причину")}
                     value={customReason}
                     onChangeText={setCustomReason}
                     multiline
                     style={{ marginTop: space.x2, minHeight: 80, textAlignVertical: "top" }}
                   />
                   <Button
-                    label="Отклонить с этой причиной"
+                    label={tr("Отклонить с этой причиной")}
                     variant="secondary"
                     disabled={isBusy || !customReason.trim()}
                     onPress={() => review(it.id, false, customReason)}
@@ -268,7 +264,7 @@ export default function ModeratorScreen() {
               )}
 
               <Button
-                label="Обман — отклонить и снять очки"
+                label={tr("Обман — отклонить и снять очки")}
                 icon="warning-outline"
                 variant="danger"
                 disabled={isBusy}

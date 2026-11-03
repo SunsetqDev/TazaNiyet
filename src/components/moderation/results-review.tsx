@@ -12,6 +12,7 @@ import { SectionHeader } from "../ui/section-header";
 import { SkeletonCard } from "../ui/skeleton";
 import { TextField } from "../ui/text-field";
 import { Shot } from "./shot";
+import { tr, trs, locale } from "../../lib/i18n";
 
 type Row = {
   id: number;
@@ -28,10 +29,10 @@ type Row = {
 };
 
 const REJECT_REASONS = [
-  "На фото «после» мусор всё ещё виден",
-  "Это фото другого места",
-  "Фото размытое или тёмное",
-  "На фото люди, номера машин или документы",
+  tr("На фото «после» мусор всё ещё виден"),
+  tr("Это фото другого места"),
+  tr("Фото размытое или тёмное"),
+  tr("На фото люди, номера машин или документы"),
 ];
 
 function ResultCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>; onDone: () => void }) {
@@ -49,17 +50,17 @@ function ResultCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
     });
     setBusy(false);
     if (error) {
-      Alert.alert("Ошибка", error.message);
+      Alert.alert(tr("Ошибка"), trs(error.message));
       return;
     }
-    Alert.alert("Результат", String(data));
+    Alert.alert(tr("Результат"), trs(String(data)));
     onDone();
   };
 
   const fraud = () =>
-    Alert.alert("Пометить как обман?", `Результат отклонится, у исполнителя снимется ${r.points} TZ, задание снова станет доступным.`, [
-      { text: "Отмена", style: "cancel" },
-      { text: "Обман", style: "destructive", onPress: () => review(false, "Фейковый результат", r.points) },
+    Alert.alert(tr("Пометить как обман?"), tr("Результат отклонится, у исполнителя снимется {0} TZ, задание снова станет доступным.", r.points), [
+      { text: tr("Отмена"), style: "cancel" },
+      { text: tr("Обман"), style: "destructive", onPress: () => review(false, tr("Фейковый результат"), r.points) },
     ]);
 
   return (
@@ -68,39 +69,35 @@ function ResultCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
         <View style={{ flex: 1 }}>
           <AppText variant="bodyStrong">{r.title}</AppText>
           <AppText variant="caption">
-            {r.assignee_name} · {DIFFICULTY[r.difficulty]?.label ?? ""} · {r.address ?? "без адреса"}
+            {r.assignee_name} · {DIFFICULTY[r.difficulty]?.label ?? ""} · {r.address ?? tr("без адреса")}
           </AppText>
         </View>
         <AppText style={s.pts}>+{r.points} TZ</AppText>
       </View>
 
       <View style={s.photos}>
-        <Shot label="Было" uri={urls[r.photo_paths[0]]} />
-        <Shot label="Стало" uri={r.result_photo_path ? urls[r.result_photo_path] : null} />
+        <Shot label={tr("Было")} uri={urls[r.photo_paths[0]]} />
+        <Shot label={tr("Стало")} uri={r.result_photo_path ? urls[r.result_photo_path] : null} />
       </View>
 
       <View style={s.facts}>
         <Icon name="navigate-outline" size={16} color={color.muted} />
-        <AppText variant="caption" style={{ flex: 1 }}>
-          Снято в {Math.round(r.result_distance_m ?? 0)} м от точки
-          {r.result_submitted_at ? ` · ${new Date(r.result_submitted_at).toLocaleString("ru-RU")}` : ""}
-          {r.reject_count > 0 ? ` · отклоняли раньше: ${r.reject_count}` : ""}
+        <AppText variant="caption" style={{ flex: 1 }}>{tr("Снято в")}{" "}{Math.round(r.result_distance_m ?? 0)}{" "}{tr("м от точки")}{r.result_submitted_at ? ` · ${new Date(r.result_submitted_at).toLocaleString(locale())}` : ""}
+          {r.reject_count > 0 ? tr(" · отклоняли раньше: {0}", r.reject_count) : ""}
         </AppText>
       </View>
 
       {!rejecting ? (
         <>
-          <Button label={`Принять · +${r.points} TZ`} icon="checkmark" onPress={() => review(true)} loading={busy} style={{ marginTop: space.x4 }} />
+          <Button label={tr("Принять · +{0} TZ", r.points)} icon="checkmark" onPress={() => review(true)} loading={busy} style={{ marginTop: space.x4 }} />
           <View style={[s.row, { marginTop: space.x2 }]}>
-            <Button label="Отклонить" variant="secondary" onPress={() => setRejecting(true)} disabled={busy} style={{ flex: 1 }} />
-            <Button label="Обман" icon="warning-outline" variant="danger" onPress={fraud} disabled={busy} style={{ flex: 1 }} />
+            <Button label={tr("Отклонить")} variant="secondary" onPress={() => setRejecting(true)} disabled={busy} style={{ flex: 1 }} />
+            <Button label={tr("Обман")} icon="warning-outline" variant="danger" onPress={fraud} disabled={busy} style={{ flex: 1 }} />
           </View>
         </>
       ) : (
         <View style={s.rejectBox}>
-          <AppText variant="overline" style={{ marginBottom: space.x2 }}>
-            Причина — исполнитель сможет переснять
-          </AppText>
+          <AppText variant="overline" style={{ marginBottom: space.x2 }}>{tr("Причина — исполнитель сможет переснять")}</AppText>
           {REJECT_REASONS.map((x) => (
             <Pressable key={x} style={({ pressed }) => [s.reason, pressed && { opacity: 0.6 }]} disabled={busy} onPress={() => review(false, x)}>
               <AppText variant="body" style={{ flex: 1 }}>
@@ -110,14 +107,14 @@ function ResultCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
             </Pressable>
           ))}
           <TextField
-            placeholder="Или напишите свою причину"
+            placeholder={tr("Или напишите свою причину")}
             value={reason}
             onChangeText={setReason}
             multiline
             style={{ marginTop: space.x2, minHeight: 72, textAlignVertical: "top" }}
           />
-          <Button label="Отклонить с этой причиной" variant="secondary" disabled={busy || !reason.trim()} onPress={() => review(false, reason)} />
-          <Button label="Отмена" variant="ghost" onPress={() => setRejecting(false)} />
+          <Button label={tr("Отклонить с этой причиной")} variant="secondary" disabled={busy || !reason.trim()} onPress={() => review(false, reason)} />
+          <Button label={tr("Отмена")} variant="ghost" onPress={() => setRejecting(false)} />
         </View>
       )}
     </Card>
@@ -158,11 +155,11 @@ export function ResultsReview() {
 
   return (
     <>
-      <SectionHeader title="Результаты уборки" hint={loading ? undefined : String(rows.length)} action="Обновить" onAction={load} />
+      <SectionHeader title={tr("Результаты уборки")} hint={loading ? undefined : String(rows.length)} action={tr("Обновить")} onAction={load} />
       {loading && <SkeletonCard height={380} />}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && rows.length === 0 && (
-        <EmptyState icon="checkmark-done-outline" title="Нечего проверять" text="Когда участники отправят фото после уборки, они появятся здесь." />
+        <EmptyState icon="checkmark-done-outline" title={tr("Нечего проверять")} text={tr("Когда участники отправят фото после уборки, они появятся здесь.")} />
       )}
       {!loading && !error && rows.map((r) => <ResultCard key={r.id} r={r} urls={urls} onDone={load} />)}
     </>

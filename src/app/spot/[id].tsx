@@ -17,6 +17,7 @@ import { getCurrentCoords, reportCategory } from "../../lib/reports";
 import { DIFFICULTY, distanceM, formatDistance, openRoute, RESULT_RADIUS_M, timeLeft, type SpotTask } from "../../lib/spot-tasks";
 import { supabase } from "../../lib/supabase";
 import { color, font, radius, space } from "../../lib/theme";
+import { tr, trs, locale } from "../../lib/i18n";
 
 function Fact({ icon, text }: { icon: IconName; text: string }) {
   return (
@@ -86,17 +87,17 @@ export default function SpotTaskScreen() {
 
   const claim = () =>
     Alert.alert(
-      "Принять задание?",
-      `Оно закрепится за вами на 48 часов. Когда уберёте место, сфотографируйте результат прямо там — в радиусе ${RESULT_RADIUS_M} м.`,
+      tr("Принять задание?"),
+      tr("Оно закрепится за вами на 48 часов. Когда уберёте место, сфотографируйте результат прямо там — в радиусе {0} м.", RESULT_RADIUS_M),
       [
-        { text: "Отмена", style: "cancel" },
+        { text: tr("Отмена"), style: "cancel" },
         {
-          text: "Принять",
+          text: tr("Принять"),
           onPress: async () => {
             setBusy("claim");
             const { error } = await supabase.rpc("claim_task", { p_id: Number(id) });
             setBusy(null);
-            if (error) Alert.alert("Не получилось", error.message);
+            if (error) Alert.alert(tr("Не получилось"), trs(error.message));
             await load();
           },
         },
@@ -104,16 +105,16 @@ export default function SpotTaskScreen() {
     );
 
   const release = () =>
-    Alert.alert("Отказаться от задания?", "Оно снова станет доступным другим участникам.", [
-      { text: "Нет", style: "cancel" },
+    Alert.alert(tr("Отказаться от задания?"), tr("Оно снова станет доступным другим участникам."), [
+      { text: tr("Нет"), style: "cancel" },
       {
-        text: "Отказаться",
+        text: tr("Отказаться"),
         style: "destructive",
         onPress: async () => {
           setBusy("release");
           const { error } = await supabase.rpc("release_task", { p_id: Number(id) });
           setBusy(null);
-          if (error) Alert.alert("Не получилось", error.message);
+          if (error) Alert.alert(tr("Не получилось"), trs(error.message));
           await load();
         },
       },
@@ -121,24 +122,24 @@ export default function SpotTaskScreen() {
 
   // только модератор и только свободное задание (сервер проверяет то же самое)
   const cancelTask = () =>
-    Alert.alert("Снять задание с карты?", "Оно пропадёт у всех участников. Отменить это нельзя.", [
-      { text: "Нет", style: "cancel" },
+    Alert.alert(tr("Снять задание с карты?"), tr("Оно пропадёт у всех участников. Отменить это нельзя."), [
+      { text: tr("Нет"), style: "cancel" },
       {
-        text: "Снять",
+        text: tr("Снять"),
         style: "destructive",
         onPress: async () => {
           setBusy("cancel");
           const { data, error } = await supabase.rpc("cancel_spot_task", { p_id: Number(id), p_reason: null });
           setBusy(null);
           if (error) {
-            Alert.alert("Не получилось", error.message);
+            Alert.alert(tr("Не получилось"), trs(error.message));
             return;
           }
           if (data === "Задание снято с карты") {
-            Alert.alert("Готово", String(data));
+            Alert.alert(tr("Готово"), trs(String(data)));
             router.back();
           } else {
-            Alert.alert("Не получилось", String(data));
+            Alert.alert(tr("Не получилось"), trs(String(data)));
             await load();
           }
         },
@@ -153,9 +154,9 @@ export default function SpotTaskScreen() {
     const d = distanceM(here.lat, here.lng, t.lat, t.lng);
     setDist(d);
     if (d > RESULT_RADIUS_M) {
-      Alert.alert("Вы далеко от места", `До точки ${formatDistance(d)}. Подойдите ближе — до ${RESULT_RADIUS_M} м — и сфотографируйте результат там.`, [
-        { text: "Понятно", style: "cancel" },
-        { text: "Маршрут", onPress: () => openRoute(t.lat, t.lng) },
+      Alert.alert(tr("Вы далеко от места"), tr("До точки {0}. Подойдите ближе — до {1} м — и сфотографируйте результат там.", formatDistance(d), RESULT_RADIUS_M), [
+        { text: tr("Понятно"), style: "cancel" },
+        { text: tr("Маршрут"), onPress: () => openRoute(t.lat, t.lng) },
       ]);
       return;
     }
@@ -172,9 +173,9 @@ export default function SpotTaskScreen() {
       const path = await uploadPhoto("reports", photo, user.id, `result-${t.id}`);
       const { error } = await supabase.rpc("submit_task_result", { p_id: t.id, p_photo_path: path, p_lat: here.lat, p_lng: here.lng });
       if (error) throw error;
-      Alert.alert("Результат отправлен", `Модератор сравнит фото «было» и «стало». После подтверждения вы получите +${t.points} TZ.`);
+      Alert.alert(tr("Результат отправлен"), tr("Модератор сравнит фото «было» и «стало». После подтверждения вы получите +{0} TZ.", t.points));
     } catch (e: any) {
-      Alert.alert("Не удалось отправить", e?.message ?? "Проверьте интернет и попробуйте снова.");
+      Alert.alert(tr("Не удалось отправить"), trs(e?.message) ?? tr("Проверьте интернет и попробуйте снова."));
     } finally {
       setBusy(null);
       await load();
@@ -198,7 +199,7 @@ export default function SpotTaskScreen() {
         {error ? (
           <ErrorState onRetry={load} />
         ) : (
-          <EmptyState icon="map-outline" title="Задание не найдено" text="Возможно, его уже сняли с карты." action="К карте" onAction={() => router.replace("/map")} />
+          <EmptyState icon="map-outline" title={tr("Задание не найдено")} text={tr("Возможно, его уже сняли с карты.")} action={tr("К карте")} onAction={() => router.replace("/map")} />
         )}
       </Screen>
     );
@@ -212,22 +213,22 @@ export default function SpotTaskScreen() {
   if (t.status === "available" && !t.is_my_report) {
     footer = (
       <View style={s.footerRow}>
-        <Button label="Маршрут" icon="navigate-outline" variant="secondary" onPress={() => openRoute(t.lat, t.lng)} style={{ flex: 1 }} />
-        <Button label="Принять задание" icon="hand-left-outline" onPress={claim} loading={busy === "claim"} style={{ flex: 1.4 }} />
+        <Button label={tr("Маршрут")} icon="navigate-outline" variant="secondary" onPress={() => openRoute(t.lat, t.lng)} style={{ flex: 1 }} />
+        <Button label={tr("Принять задание")} icon="hand-left-outline" onPress={claim} loading={busy === "claim"} style={{ flex: 1.4 }} />
       </View>
     );
   } else if (mineInProgress) {
     footer = (
       <View style={{ gap: space.x2 }}>
-        <Button label="Сфотографировать результат" icon="camera-outline" onPress={sendResult} loading={busy === "result"} />
+        <Button label={tr("Сфотографировать результат")} icon="camera-outline" onPress={sendResult} loading={busy === "result"} />
         <View style={s.footerRow}>
-          <Button label="Маршрут" icon="navigate-outline" variant="secondary" onPress={() => openRoute(t.lat, t.lng)} style={{ flex: 1 }} />
-          <Button label="Отказаться" variant="danger" onPress={release} loading={busy === "release"} style={{ flex: 1 }} />
+          <Button label={tr("Маршрут")} icon="navigate-outline" variant="secondary" onPress={() => openRoute(t.lat, t.lng)} style={{ flex: 1 }} />
+          <Button label={tr("Отказаться")} variant="danger" onPress={release} loading={busy === "release"} style={{ flex: 1 }} />
         </View>
       </View>
     );
   } else if (t.status !== "completed") {
-    footer = <Button label="Построить маршрут" icon="navigate-outline" variant="secondary" onPress={() => openRoute(t.lat, t.lng)} />;
+    footer = <Button label={tr("Построить маршрут")} icon="navigate-outline" variant="secondary" onPress={() => openRoute(t.lat, t.lng)} />;
   }
 
   return (
@@ -276,27 +277,26 @@ export default function SpotTaskScreen() {
       </View>
 
       {mineInProgress && (
-        <Note icon="time-outline" text={`Задание за вами. Осталось ${timeLeft(t.claim_expires_at)} — потом оно снова станет доступным.`} />
+        <Note icon="time-outline" text={tr("Задание за вами. Осталось {0} — потом оно снова станет доступным.", timeLeft(t.claim_expires_at))} />
       )}
       {mineInProgress && t.last_reject_reason ? (
-        <Note icon="information-circle-outline" tone="danger" text={`Модератор вернул результат: ${t.last_reject_reason}. Переснимите фото.`} />
+        <Note icon="information-circle-outline" tone="danger" text={tr("Модератор вернул результат: {0}. Переснимите фото.", t.last_reject_reason)} />
       ) : null}
       {t.is_mine && t.status === "under_review" && (
-        <Note icon="hourglass-outline" tone="warn" text={`Результат на проверке. После подтверждения вы получите +${t.points} TZ.`} />
+        <Note icon="hourglass-outline" tone="warn" text={tr("Результат на проверке. После подтверждения вы получите +{0} TZ.", t.points)} />
       )}
-      {t.status === "in_progress" && !t.is_mine && <Note icon="walk-outline" text="Это место уже убирает другой участник." />}
-      {t.status === "available" && t.is_my_report && <Note icon="person-outline" text="Это ваша заявка — убрать место должен другой участник." />}
-      {t.status === "completed" && <Note icon="checkmark-done-outline" text="Место убрано. Спасибо всем, кто помог!" />}
+      {t.status === "in_progress" && !t.is_mine && <Note icon="walk-outline" text={tr("Это место уже убирает другой участник.")} />}
+      {t.status === "available" && t.is_my_report && <Note icon="person-outline" text={tr("Это ваша заявка — убрать место должен другой участник.")} />}
+      {t.status === "completed" && <Note icon="checkmark-done-outline" text={tr("Место убрано. Спасибо всем, кто помог!")} />}
 
-      <SectionHeader title="Что нужно сделать" />
+      <SectionHeader title={tr("Что нужно сделать")} />
       <AppText variant="body" color={color.ink}>
         {t.description}
       </AppText>
-      <AppText variant="caption" style={{ marginTop: space.x2 }}>
-        Сообщил(а): {t.author_name} · {new Date(t.created_at).toLocaleDateString("ru-RU")}
+      <AppText variant="caption" style={{ marginTop: space.x2 }}>{tr("Сообщил(а):")}{" "}{t.author_name} · {new Date(t.created_at).toLocaleDateString(locale())}
       </AppText>
 
-      <SectionHeader title="Где это" />
+      <SectionHeader title={tr("Где это")} />
       <View style={s.map}>
         <OsmMap
           style={StyleSheet.absoluteFill}
@@ -315,24 +315,19 @@ export default function SpotTaskScreen() {
       </View>
       <View style={s.safety}>
         <Icon name="shield-checkmark-outline" size={16} color={color.muted} />
-        <AppText variant="caption" style={{ flex: 1 }}>
-          Убирайте в перчатках, не трогайте стекло, шприцы и химикаты — о таком сообщите взрослым. Не ходите к воде и на
-          стройки одни.
-        </AppText>
+        <AppText variant="caption" style={{ flex: 1 }}>{tr("Убирайте в перчатках, не трогайте стекло, шприцы и химикаты — о таком сообщите взрослым. Не ходите к воде и на стройки одни.")}</AppText>
       </View>
 
       {t.can_moderate && (
         <View style={s.modBox}>
           <View style={s.modHead}>
             <Icon name="shield-checkmark-outline" size={16} color={color.danger} />
-            <AppText variant="overline" color={color.danger}>
-              Модератор
-            </AppText>
+            <AppText variant="overline" color={color.danger}>{tr("Модератор")}</AppText>
           </View>
           {t.status === "available" ? (
-            <Button label="Снять задание с карты" icon="trash-outline" variant="danger" onPress={cancelTask} loading={busy === "cancel"} />
+            <Button label={tr("Снять задание с карты")} icon="trash-outline" variant="danger" onPress={cancelTask} loading={busy === "cancel"} />
           ) : (
-            <AppText variant="caption">Снять с карты можно только свободное задание — сейчас его нельзя удалить.</AppText>
+            <AppText variant="caption">{tr("Снять с карты можно только свободное задание — сейчас его нельзя удалить.")}</AppText>
           )}
         </View>
       )}

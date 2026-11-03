@@ -15,6 +15,7 @@ import { pickPhoto, takePhoto, uploadPhoto, type Photo } from "../lib/photos";
 import { addressFor, getCurrentCoords, inKazakhstan, KZ_CENTER, KZ_ZOOM, REPORT_CATEGORIES, type Coords } from "../lib/reports";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
+import { tr, trs } from "../lib/i18n";
 
 const MAX_PHOTOS = 3;
 
@@ -56,7 +57,7 @@ export default function ReportScreen() {
     setLocating(false);
     if (!c) return;
     if (!inKazakhstan(c.lat, c.lng)) {
-      Alert.alert("Место вне Казахстана", "Заявки принимаются только по Казахстану. Отметьте точку на карте вручную.");
+      Alert.alert(tr("Место вне Казахстана"), tr("Заявки принимаются только по Казахстану. Отметьте точку на карте вручную."));
       return;
     }
     setCoords(c);
@@ -72,18 +73,18 @@ export default function ReportScreen() {
   const desc = description.trim();
   const missing =
     photos.length === 0
-      ? "Добавьте хотя бы одно фото"
+      ? tr("Добавьте хотя бы одно фото")
       : !category
-      ? "Выберите, что случилось"
+      ? tr("Выберите, что случилось")
       : desc.length < 5
-      ? "Опишите проблему (от 5 символов)"
+      ? tr("Опишите проблему (от 5 символов)")
       : !coords
-      ? "Укажите место"
+      ? tr("Укажите место")
       : null;
 
   const submit = async () => {
     if (missing) {
-      Alert.alert("Почти готово", missing);
+      Alert.alert(tr("Почти готово"), missing);
       return;
     }
     setSending(true);
@@ -110,7 +111,7 @@ export default function ReportScreen() {
       if (error) throw error;
       setSentId(Number(data));
     } catch (e: any) {
-      Alert.alert("Не удалось отправить", e?.message ?? "Проверьте интернет и попробуйте снова.");
+      Alert.alert(tr("Не удалось отправить"), trs(e?.message) ?? tr("Проверьте интернет и попробуйте снова."));
     } finally {
       setSending(false);
     }
@@ -123,14 +124,10 @@ export default function ReportScreen() {
           <View style={s.doneIcon}>
             <Icon name="checkmark" size={32} color={color.forest} />
           </View>
-          <AppText variant="h1" style={{ textAlign: "center" }}>
-            Заявка отправлена
-          </AppText>
-          <AppText variant="body" color={color.muted} style={{ textAlign: "center" }}>
-            Модератор проверит фото и место. После подтверждения оно появится на карте как задание, а вы получите +10 TZ.
-          </AppText>
-          <Button label="Мои заявки" onPress={() => router.replace("/my-reports")} style={s.doneBtn} />
-          <Button label="На главную" variant="ghost" onPress={() => router.replace("/")} />
+          <AppText variant="h1" style={{ textAlign: "center" }}>{tr("Заявка отправлена")}</AppText>
+          <AppText variant="body" color={color.muted} style={{ textAlign: "center" }}>{tr("Модератор проверит фото и место. После подтверждения оно появится на карте как задание, а вы получите +10 TZ.")}</AppText>
+          <Button label={tr("Мои заявки")} onPress={() => router.replace("/my-reports")} style={s.doneBtn} />
+          <Button label={tr("На главную")} variant="ghost" onPress={() => router.replace("/")} />
         </Animated.View>
       </Screen>
     );
@@ -146,24 +143,22 @@ export default function ReportScreen() {
               {missing}
             </AppText>
           ) : null}
-          <Button label="Отправить заявку" icon="paper-plane-outline" onPress={submit} loading={sending} />
+          <Button label={tr("Отправить заявку")} icon="paper-plane-outline" onPress={submit} loading={sending} />
         </View>
       }
     >
       <BackButton />
-      <AppText variant="h1">Сообщить о загрязнении</AppText>
-      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1 }}>
-        Сфотографируйте место и отметьте его на карте. После проверки оно станет заданием для других участников.
-      </AppText>
+      <AppText variant="h1">{tr("Сообщить о загрязнении")}</AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1 }}>{tr("Сфотографируйте место и отметьте его на карте. После проверки оно станет заданием для других участников.")}</AppText>
       <Button
-        label="Мои заявки и их статусы"
+        label={tr("Мои заявки и их статусы")}
         icon="list-outline"
         variant="ghost"
         onPress={() => router.push("/my-reports")}
         style={{ alignSelf: "flex-start", paddingHorizontal: 0 }}
       />
 
-      <SectionHeader title="Фото" hint={`${photos.length} из ${MAX_PHOTOS}`} />
+      <SectionHeader title={tr("Фото")} hint={tr("{0} из {1}", photos.length, MAX_PHOTOS)} />
       <View style={s.photos}>
         {photos.map((p, i) => (
           <View key={p.uri} style={s.thumb}>
@@ -172,7 +167,7 @@ export default function ReportScreen() {
               hitSlop={8}
               style={s.remove}
               onPress={() => setPhotos((list) => list.filter((_, j) => j !== i))}
-              accessibilityLabel="Убрать фото"
+              accessibilityLabel={tr("Убрать фото")}
             >
               <Icon name="close" size={16} color={color.onForest} />
             </Pressable>
@@ -182,23 +177,21 @@ export default function ReportScreen() {
           <View style={s.addCol}>
             <PressScale onPress={() => addPhoto("camera")} scaleTo={0.96} style={s.addBtn}>
               <Icon name="camera-outline" size={22} color={color.forest} />
-              <AppText style={s.addText}>Камера</AppText>
+              <AppText style={s.addText}>{tr("Камера")}</AppText>
             </PressScale>
             <PressScale onPress={() => addPhoto("gallery")} scaleTo={0.96} style={s.addBtn}>
               <Icon name="images-outline" size={22} color={color.forest} />
-              <AppText style={s.addText}>Галерея</AppText>
+              <AppText style={s.addText}>{tr("Галерея")}</AppText>
             </PressScale>
           </View>
         )}
       </View>
       <View style={s.note}>
         <Icon name="eye-off-outline" size={14} color={color.muted} />
-        <AppText variant="caption" style={{ flex: 1 }}>
-          Снимайте только место — без лиц людей, номеров машин и документов.
-        </AppText>
+        <AppText variant="caption" style={{ flex: 1 }}>{tr("Снимайте только место — без лиц людей, номеров машин и документов.")}</AppText>
       </View>
 
-      <SectionHeader title="Что случилось" />
+      <SectionHeader title={tr("Что случилось")} />
       <View style={s.cats}>
         {REPORT_CATEGORIES.map((c) => {
           const on = category === c.k;
@@ -215,8 +208,8 @@ export default function ReportScreen() {
 
       <View style={{ marginTop: space.x5 }}>
         <TextField
-          label="Описание"
-          placeholder="Например: пакеты с мусором у скамеек возле детской площадки"
+          label={tr("Описание")}
+          placeholder={tr("Например: пакеты с мусором у скамеек возле детской площадки")}
           multiline
           maxLength={500}
           value={description}
@@ -226,11 +219,11 @@ export default function ReportScreen() {
         />
       </View>
 
-      <SectionHeader title="Где это" />
+      <SectionHeader title={tr("Где это")} />
       {!coords && !manual ? (
         <View style={s.locCard}>
-          <Button label="Определить по GPS" icon="locate-outline" variant="secondary" onPress={locate} loading={locating} />
-          <Button label="Отметить на карте вручную" variant="ghost" onPress={() => setManual(true)} />
+          <Button label={tr("Определить по GPS")} icon="locate-outline" variant="secondary" onPress={locate} loading={locating} />
+          <Button label={tr("Отметить на карте вручную")} variant="ghost" onPress={() => setManual(true)} />
         </View>
       ) : (
         <>
@@ -247,20 +240,16 @@ export default function ReportScreen() {
           <View style={s.locInfo}>
             <Icon name="location" size={16} color={color.forest} />
             <AppText variant="body" style={{ flex: 1 }}>
-              {coords ? address || `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : "Нажмите на карту, чтобы поставить метку"}
+              {coords ? address || `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : tr("Нажмите на карту, чтобы поставить метку")}
             </AppText>
           </View>
           <AppText variant="caption">
-            {coords?.accuracy ? `Точность GPS ±${Math.round(coords.accuracy)} м. ` : ""}
-            Если метка стоит неточно — перетащите её или нажмите на нужное место.
-          </AppText>
-          <Button label="Обновить по GPS" icon="locate-outline" variant="ghost" onPress={locate} loading={locating} style={{ alignSelf: "flex-start", paddingHorizontal: 0 }} />
+            {coords?.accuracy ? tr("Точность GPS ±{0} м. ", Math.round(coords.accuracy)) : ""}{tr("Если метка стоит неточно — перетащите её или нажмите на нужное место.")}</AppText>
+          <Button label={tr("Обновить по GPS")} icon="locate-outline" variant="ghost" onPress={locate} loading={locating} style={{ alignSelf: "flex-start", paddingHorizontal: 0 }} />
           {nearby > 0 && (
             <View style={s.warn}>
               <Icon name="alert-circle-outline" size={18} color={color.warn} />
-              <AppText variant="body" color={color.warn} style={{ flex: 1 }}>
-                Рядом уже есть заявка ({nearby}). Если это то же место, отправлять повторно не нужно.
-              </AppText>
+              <AppText variant="body" color={color.warn} style={{ flex: 1 }}>{tr("Рядом уже есть заявка (")}{nearby}{tr("). Если это то же место, отправлять повторно не нужно.")}</AppText>
             </View>
           )}
         </>

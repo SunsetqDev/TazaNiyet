@@ -9,6 +9,7 @@ import { Card } from "../ui/card";
 import { EmptyState, ErrorState } from "../ui/empty-state";
 import { SectionHeader } from "../ui/section-header";
 import { SkeletonCard } from "../ui/skeleton";
+import { tr, trs, locale } from "../../lib/i18n";
 
 type Row = {
   message_id: number;
@@ -24,7 +25,7 @@ type Row = {
 };
 
 const plural = (n: number) =>
-  n % 10 === 1 && n % 100 !== 11 ? `${n} жалоба` : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? `${n} жалобы` : `${n} жалоб`;
+  n % 10 === 1 && n % 100 !== 11 ? tr("{0} жалоба", n) : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? tr("{0} жалобы", n) : tr("{0} жалоб", n);
 
 function ReportCard({ r, onDone }: { r: Row; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -34,20 +35,20 @@ function ReportCard({ r, onDone }: { r: Row; onDone: () => void }) {
     const { data, error } = await supabase.rpc("resolve_message_report", { p_message: r.message_id, p_delete: del, p_penalty: penalty });
     setBusy(false);
     if (error) {
-      Alert.alert("Ошибка", error.message);
+      Alert.alert(tr("Ошибка"), trs(error.message));
       return;
     }
-    Alert.alert("Готово", String(data));
+    Alert.alert(tr("Готово"), trs(String(data)));
     onDone();
   };
 
   const violation = () =>
     Alert.alert(
-      "Удалить и записать нарушение?",
-      `Сообщение удалится, ${r.sender_name} получит нарушение. При 3 нарушениях за 90 дней аккаунт попадёт во вкладку «Аккаунты».`,
+      tr("Удалить и записать нарушение?"),
+      tr("Сообщение удалится, {0} получит нарушение. При 3 нарушениях за 90 дней аккаунт попадёт во вкладку «Аккаунты».", r.sender_name),
       [
-        { text: "Отмена", style: "cancel" },
-        { text: "Нарушение", style: "destructive", onPress: () => resolve(true, true) },
+        { text: tr("Отмена"), style: "cancel" },
+        { text: tr("Нарушение"), style: "destructive", onPress: () => resolve(true, true) },
       ]
     );
 
@@ -62,15 +63,14 @@ function ReportCard({ r, onDone }: { r: Row; onDone: () => void }) {
             {r.sender_name}
           </AppText>
           <AppText variant="caption" numberOfLines={1}>
-            {r.chat_title} · {new Date(r.sent_at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+            {r.chat_title} · {new Date(r.sent_at).toLocaleString(locale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
           </AppText>
         </View>
         <AppText style={s.count}>{plural(r.reports)}</AppText>
       </View>
 
       {r.reasons.length > 0 && (
-        <AppText variant="caption" style={{ marginTop: space.x2 }}>
-          Причина: {Array.from(new Set(r.reasons)).join(", ")}
+        <AppText variant="caption" style={{ marginTop: space.x2 }}>{tr("Причина:")}{" "}{Array.from(new Set(r.reasons)).join(", ")}
         </AppText>
       )}
 
@@ -88,10 +88,10 @@ function ReportCard({ r, onDone }: { r: Row; onDone: () => void }) {
       </View>
 
       <View style={s.row}>
-        <Button label="Без нарушений" variant="secondary" onPress={() => resolve(false, false)} disabled={busy} style={{ flex: 1 }} />
-        <Button label="Удалить" variant="secondary" onPress={() => resolve(true, false)} disabled={busy || r.deleted} style={{ flex: 1 }} />
+        <Button label={tr("Без нарушений")} variant="secondary" onPress={() => resolve(false, false)} disabled={busy} style={{ flex: 1 }} />
+        <Button label={tr("Удалить")} variant="secondary" onPress={() => resolve(true, false)} disabled={busy || r.deleted} style={{ flex: 1 }} />
       </View>
-      <Button label="Удалить и записать нарушение" variant="danger" icon="warning-outline" onPress={violation} disabled={busy} />
+      <Button label={tr("Удалить и записать нарушение")} variant="danger" icon="warning-outline" onPress={violation} disabled={busy} />
     </Card>
   );
 }
@@ -116,11 +116,11 @@ export function MessageReports() {
 
   return (
     <>
-      <SectionHeader title="Жалобы на сообщения" hint={loading ? undefined : String(rows.length)} action="Обновить" onAction={load} />
+      <SectionHeader title={tr("Жалобы на сообщения")} hint={loading ? undefined : String(rows.length)} action={tr("Обновить")} onAction={load} />
       {loading && <SkeletonCard height={260} />}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && rows.length === 0 && (
-        <EmptyState icon="chatbubbles-outline" title="Жалоб нет" text="Когда участники пожалуются на сообщение, оно появится здесь." />
+        <EmptyState icon="chatbubbles-outline" title={tr("Жалоб нет")} text={tr("Когда участники пожалуются на сообщение, оно появится здесь.")} />
       )}
       {!loading && !error && rows.map((r) => <ReportCard key={r.message_id} r={r} onDone={load} />)}
     </>

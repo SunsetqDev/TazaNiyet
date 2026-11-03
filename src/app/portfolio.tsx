@@ -15,6 +15,7 @@ import { SkeletonCard } from "../components/ui/skeleton";
 import { TextField } from "../components/ui/text-field";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
+import { tr, trs, locale } from "../lib/i18n";
 
 type TaskRow = { title: string; emoji: string; points: number; date: string };
 type Result = { name: string; place: string | null; points: number; tasks: TaskRow[] };
@@ -23,7 +24,7 @@ type Result = { name: string; place: string | null; points: number; tasks: TaskR
 function byMonth(tasks: TaskRow[]) {
   const groups: { month: string; items: TaskRow[] }[] = [];
   for (const t of tasks) {
-    const month = new Date(t.date).toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    const month = new Date(t.date).toLocaleDateString(locale(), { month: "long", year: "numeric" });
     const g = groups.find((x) => x.month === month);
     if (g) g.items.push(t);
     else groups.push({ month, items: [t] });
@@ -44,17 +45,15 @@ function ResultView({ r }: { r: Result }) {
       <View style={s.resStats}>
         <View style={s.resStat}>
           <AppText style={s.resNum}>{r.points}</AppText>
-          <AppText variant="caption">очков TZ</AppText>
+          <AppText variant="caption">{tr("очков TZ")}</AppText>
         </View>
         <View style={s.resStat}>
           <AppText style={s.resNum}>{r.tasks.length}</AppText>
-          <AppText variant="caption">подтверждённых заданий</AppText>
+          <AppText variant="caption">{tr("подтверждённых заданий")}</AppText>
         </View>
       </View>
       {r.tasks.length === 0 ? (
-        <AppText variant="body" color={color.muted} style={{ marginTop: space.x3 }}>
-          Подтверждённых заданий пока нет.
-        </AppText>
+        <AppText variant="body" color={color.muted} style={{ marginTop: space.x3 }}>{tr("Подтверждённых заданий пока нет.")}</AppText>
       ) : (
         byMonth(r.tasks).map((g) => (
           <View key={g.month} style={{ marginTop: space.x4 }}>
@@ -64,7 +63,7 @@ function ResultView({ r }: { r: Result }) {
                 key={`${t.date}-${i}`}
                 first={i === 0}
                 title={t.title}
-                subtitle={new Date(t.date).toLocaleDateString("ru-RU")}
+                subtitle={new Date(t.date).toLocaleDateString(locale())}
                 leading={
                   <RowIcon>
                     <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
@@ -118,15 +117,15 @@ export default function PortfolioScreen() {
     setBusy(true);
     const { error } = await supabase.from("portfolio_links").insert({});
     setBusy(false);
-    if (error) Alert.alert("Ошибка", error.message);
+    if (error) Alert.alert(tr("Ошибка"), trs(error.message));
     else load();
   };
 
   const revoke = () => {
-    Alert.alert("Отозвать код?", "Старый код и QR перестанут работать. Вы сможете создать новый.", [
-      { text: "Отмена", style: "cancel" },
+    Alert.alert(tr("Отозвать код?"), tr("Старый код и QR перестанут работать. Вы сможете создать новый."), [
+      { text: tr("Отмена"), style: "cancel" },
       {
-        text: "Отозвать",
+        text: tr("Отозвать"),
         style: "destructive",
         onPress: async () => {
           const { data: s } = await supabase.auth.getSession();
@@ -143,12 +142,12 @@ export default function PortfolioScreen() {
     try {
       const { data, error } = await supabase.functions.invoke("portfolio-pdf");
       if (error || !data?.url) {
-        let msg = "Проверьте интернет и попробуйте снова.";
+        let msg = tr("Проверьте интернет и попробуйте снова.");
         try {
           const body = await (error as any)?.context?.json();
           if (body?.error) msg = body.error;
         } catch {}
-        Alert.alert("Не удалось скачать PDF", msg);
+        Alert.alert(tr("Не удалось скачать PDF"), msg);
         return;
       }
       await Linking.openURL(data.url);
@@ -169,11 +168,8 @@ export default function PortfolioScreen() {
   return (
     <Screen bottomInset>
       <BackButton />
-      <AppText variant="h1">Портфолио</AppText>
-      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>
-        Покажите код при поступлении или на конкурсе. Видны только имя, место, очки и названия принятых заданий. Фото не
-        показываются.
-      </AppText>
+      <AppText variant="h1">{tr("Портфолио")}</AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>{tr("Покажите код при поступлении или на конкурсе. Видны только имя, место, очки и названия принятых заданий. Фото не показываются.")}</AppText>
 
       {loading && <SkeletonCard height={320} />}
 
@@ -181,10 +177,10 @@ export default function PortfolioScreen() {
         <Card>
           <EmptyState
             icon="qr-code-outline"
-            title="Создайте код портфолио"
-            text="По коду или QR любой проверяющий увидит ваши подтверждённые задания."
+            title={tr("Создайте код портфолио")}
+            text={tr("По коду или QR любой проверяющий увидит ваши подтверждённые задания.")}
           />
-          <Button label="Создать код" icon="add" onPress={create} loading={busy} />
+          <Button label={tr("Создать код")} icon="add" onPress={create} loading={busy} />
         </Card>
       )}
 
@@ -193,41 +189,39 @@ export default function PortfolioScreen() {
           <View style={s.qrBox}>
             <QRCode value={`tazaniyet:${code}`} size={184} color={color.ink} backgroundColor={color.surface} />
           </View>
-          <AppText variant="overline" style={{ marginTop: space.x4 }}>
-            Код проверки
-          </AppText>
+          <AppText variant="overline" style={{ marginTop: space.x4 }}>{tr("Код проверки")}</AppText>
           <AppText style={s.code} selectable>
             {code}
           </AppText>
           <Button
-            label="Поделиться кодом"
+            label={tr("Поделиться кодом")}
             icon="share-outline"
-            onPress={() => Share.share({ message: `Моё портфолио TazaNiyet. Код проверки: ${code}` })}
+            onPress={() => Share.share({ message: tr("Моё портфолио TazaNiyet. Код проверки: {0}", code) })}
             style={{ alignSelf: "stretch", marginTop: space.x4 }}
           />
           <Button
-            label="Скачать PDF"
+            label={tr("Скачать PDF")}
             icon="document-text-outline"
             variant="secondary"
             onPress={downloadPdf}
             loading={pdfBusy}
             style={{ alignSelf: "stretch", marginTop: space.x2 }}
           />
-          <Button label="Отозвать код" variant="danger" onPress={revoke} style={{ marginTop: space.x1 }} />
+          <Button label={tr("Отозвать код")} variant="danger" onPress={revoke} style={{ marginTop: space.x1 }} />
         </Card>
       )}
 
       {mine && (
         <>
-          <SectionHeader title="Так увидят ваше портфолио" />
+          <SectionHeader title={tr("Так увидят ваше портфолио")} />
           <ResultView r={mine} />
         </>
       )}
 
-      <SectionHeader title="Проверить чужой код" />
+      <SectionHeader title={tr("Проверить чужой код")} />
       <Card>
         <TextField
-          placeholder="Введите код портфолио"
+          placeholder={tr("Введите код портфолио")}
           autoCapitalize="none"
           autoCorrect={false}
           value={input}
@@ -237,18 +231,16 @@ export default function PortfolioScreen() {
           }}
           onSubmitEditing={verify}
           returnKeyType="search"
-          error={notFound ? "Код не найден или отозван." : null}
+          error={notFound ? tr("Код не найден или отозван.") : null}
         />
-        <Button label="Проверить" variant="secondary" icon="search-outline" onPress={verify} />
+        <Button label={tr("Проверить")} variant="secondary" icon="search-outline" onPress={verify} />
       </Card>
 
       {checked && (
         <>
           <View style={s.ok}>
             <Icon name="checkmark-circle" size={20} color={color.forest} />
-            <AppText variant="bodyStrong" color={color.forest}>
-              Портфолио подтверждено
-            </AppText>
+            <AppText variant="bodyStrong" color={color.forest}>{tr("Портфолио подтверждено")}</AppText>
           </View>
           <ResultView r={checked} />
         </>

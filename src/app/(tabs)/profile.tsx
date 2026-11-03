@@ -12,6 +12,7 @@ import { Skeleton } from "../../components/ui/skeleton";
 import { avatarUrl } from "../../lib/avatar";
 import { supabase } from "../../lib/supabase";
 import { color as palette, font, radius, space } from "../../lib/theme";
+import { tr } from "../../lib/i18n";
 
 function calcStreak(dates: string[]) {
   const days = new Set(dates.map((d) => new Date(d).toDateString()));
@@ -92,10 +93,10 @@ export default function ProfileScreen() {
   );
 
   const signOut = () => {
-    Alert.alert("Выйти из аккаунта?", "", [
-      { text: "Отмена", style: "cancel" },
+    Alert.alert(tr("Выйти из аккаунта?"), "", [
+      { text: tr("Отмена"), style: "cancel" },
       {
-        text: "Выйти",
+        text: tr("Выйти"),
         onPress: async () => {
           await supabase.auth.signOut();
           router.replace("/login");
@@ -106,11 +107,11 @@ export default function ProfileScreen() {
 
   // cur / max — для подписи прогресса у закрытых значков
   const badges = [
-    { icon: "🌱", title: "Первый шаг", cur: approved, max: 1 },
-    { icon: "🌿", title: "5 заданий", cur: approved, max: 5 },
-    { icon: "🌳", title: "10 заданий", cur: approved, max: 10 },
-    { icon: "🔥", title: "3 дня подряд", cur: streak, max: 3 },
-    { icon: "🏆", title: "Неделя подряд", cur: streak, max: 7 },
+    { icon: "🌱", title: tr("Первый шаг"), cur: approved, max: 1 },
+    { icon: "🌿", title: tr("5 заданий"), cur: approved, max: 5 },
+    { icon: "🌳", title: tr("10 заданий"), cur: approved, max: 10 },
+    { icon: "🔥", title: tr("3 дня подряд"), cur: streak, max: 3 },
+    { icon: "🏆", title: tr("Неделя подряд"), cur: streak, max: 7 },
     { icon: "⭐", title: "100 TZ", cur: points, max: 100 },
     { icon: "💎", title: "500 TZ", cur: points, max: 500 },
   ];
@@ -123,15 +124,15 @@ export default function ProfileScreen() {
         {ready ? (
           <>
             <AppText variant="h1" style={{ marginTop: space.x3, textAlign: "center" }}>
-              {nickname || name || "Мой профиль"}
+              {nickname || name || tr("Мой профиль")}
             </AppText>
-            {nickname && name ? <AppText variant="caption">{name} · видно только вам</AppText> : null}
+            {nickname && name ? <AppText variant="caption">{name}{" "}{tr("· видно только вам")}</AppText> : null}
           </>
         ) : (
           <Skeleton width={180} height={28} style={{ marginTop: space.x3 }} />
         )}
         <Button
-          label="Изменить профиль"
+          label={tr("Изменить профиль")}
           icon="create-outline"
           variant="secondary"
           onPress={() => router.push("/edit-profile")}
@@ -140,12 +141,12 @@ export default function ProfileScreen() {
       </View>
 
       <View style={s.stats}>
-        <Stat value={points} label="очков TZ" />
-        <Stat value={approved} label="принято" />
-        <Stat value={streak} label="дней подряд" />
+        <Stat value={points} label={tr("очков TZ")} />
+        <Stat value={approved} label={tr("принято")} />
+        <Stat value={streak} label={tr("дней подряд")} />
       </View>
 
-      <SectionHeader title="Значки" hint={`${gotCount} из ${badges.length}`} />
+      <SectionHeader title={tr("Значки")} hint={tr("{0} из {1}", gotCount, badges.length)} />
       <View style={s.badges}>
         {badges.map((b) => {
           const got = b.cur >= b.max;
@@ -171,35 +172,35 @@ export default function ProfileScreen() {
         })}
       </View>
 
-      <SectionHeader title="Активность" />
+      <SectionHeader title={tr("Активность")} />
       <View style={s.group}>
-        <ListRow first title="Мои задания и статусы" leading={<MenuIcon name="list-outline" />} onPress={() => router.push("/my")} />
+        <ListRow first title={tr("Мои задания и статусы")} leading={<MenuIcon name="list-outline" />} onPress={() => router.push("/my")} />
       </View>
 
-      <SectionHeader title="Поступление" />
+      <SectionHeader title={tr("Поступление")} />
       <View style={s.group}>
         <ListRow
           first
-          title="Моё портфолио"
-          subtitle="QR-код с подтверждёнными заданиями"
+          title={tr("Моё портфолио")}
+          subtitle={tr("QR-код с подтверждёнными заданиями")}
           leading={<MenuIcon name="qr-code-outline" />}
           onPress={() => router.push("/portfolio")}
         />
-        <ListRow title="Вузы и колледжи" subtitle="каталог и требования к поступлению" leading={<MenuIcon name="school-outline" />} onPress={() => router.push("/universities")} />
+        <ListRow title={tr("Вузы и колледжи")} subtitle={tr("каталог и требования к поступлению")} leading={<MenuIcon name="school-outline" />} onPress={() => router.push("/universities")} />
       </View>
 
-      <SectionHeader title="Аккаунт" />
+      <SectionHeader title={tr("Аккаунт")} />
       <View style={s.group}>
         <ListRow
           first
-          title="Настройки и конфиденциальность"
+          title={tr("Настройки и конфиденциальность")}
           leading={<MenuIcon name="settings-outline" />}
           onPress={() => router.push("/settings")}
         />
         {isMod && (
-          <ListRow title="Проверка заданий" subtitle="для модераторов" leading={<MenuIcon name="shield-checkmark-outline" />} onPress={() => router.push("/moderator")} />
+          <ListRow title={tr("Проверка заданий")} subtitle={tr("для модераторов")} leading={<MenuIcon name="shield-checkmark-outline" />} onPress={() => router.push("/moderator")} />
         )}
-        <ListRow title="Выйти" danger leading={<MenuIcon name="log-out-outline" danger />} onPress={signOut} />
+        <ListRow title={tr("Выйти")} danger leading={<MenuIcon name="log-out-outline" danger />} onPress={signOut} />
       </View>
     </Screen>
   );

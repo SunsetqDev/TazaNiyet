@@ -14,6 +14,7 @@ import { EmptyState, ErrorState } from "../ui/empty-state";
 import { SectionHeader } from "../ui/section-header";
 import { SkeletonCard } from "../ui/skeleton";
 import { TextField } from "../ui/text-field";
+import { tr, trs, locale } from "../../lib/i18n";
 
 type Row = {
   id: number;
@@ -33,10 +34,10 @@ type Row = {
 };
 
 const REJECT_REASONS = [
-  "На фото не видно загрязнения",
-  "Место указано неверно",
-  "Это место уже есть на карте",
-  "На фото люди, номера машин или документы",
+  tr("На фото не видно загрязнения"),
+  tr("Место указано неверно"),
+  tr("Это место уже есть на карте"),
+  tr("На фото люди, номера машин или документы"),
 ];
 
 const FRAUD_PENALTY = 20;
@@ -62,17 +63,17 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
     });
     setBusy(false);
     if (error) {
-      Alert.alert("Ошибка", error.message);
+      Alert.alert(tr("Ошибка"), trs(error.message));
       return;
     }
-    Alert.alert("Результат", String(data));
+    Alert.alert(tr("Результат"), trs(String(data)));
     onDone();
   };
 
   const fraud = () =>
-    Alert.alert("Пометить как обман?", `Заявка будет отклонена, у автора снимется ${FRAUD_PENALTY} TZ.`, [
-      { text: "Отмена", style: "cancel" },
-      { text: "Обман", style: "destructive", onPress: () => review(false, "Фейковая заявка", FRAUD_PENALTY) },
+    Alert.alert(tr("Пометить как обман?"), tr("Заявка будет отклонена, у автора снимется {0} TZ.", FRAUD_PENALTY), [
+      { text: tr("Отмена"), style: "cancel" },
+      { text: tr("Обман"), style: "destructive", onPress: () => review(false, tr("Фейковая заявка"), FRAUD_PENALTY) },
     ]);
 
   return (
@@ -94,11 +95,10 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
         <AppText variant="bodyStrong" style={{ flex: 1 }}>
           {cat.label}
         </AppText>
-        <AppText variant="caption">{new Date(r.created_at).toLocaleString("ru-RU")}</AppText>
+        <AppText variant="caption">{new Date(r.created_at).toLocaleString(locale())}</AppText>
       </View>
-      <AppText variant="caption">
-        Автор: {r.author_name}
-        {r.author_rejected > 0 ? ` · отклонено раньше: ${r.author_rejected}` : ""}
+      <AppText variant="caption">{tr("Автор:")}{" "}{r.author_name}
+        {r.author_rejected > 0 ? tr(" · отклонено раньше: {0}", r.author_rejected) : ""}
       </AppText>
       <AppText variant="body" color={color.ink} style={{ marginTop: space.x2 }}>
         {r.description}
@@ -115,40 +115,34 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
       </View>
       <AppText variant="caption">
         {[r.address, r.place_name ?? r.region].filter(Boolean).join(" · ")}
-        {r.accuracy_m ? ` · точность ±${Math.round(r.accuracy_m)} м` : " · отмечено вручную"}
+        {r.accuracy_m ? tr(" · точность ±{0} м", Math.round(r.accuracy_m)) : tr(" · отмечено вручную")}
       </AppText>
       {r.nearby_tasks > 0 && (
         <View style={s.warn}>
           <Icon name="alert-circle-outline" size={18} color={color.warn} />
-          <AppText variant="body" color={color.warn} style={{ flex: 1 }}>
-            В радиусе 50 м уже есть активное задание — возможно, это повтор.
-          </AppText>
+          <AppText variant="body" color={color.warn} style={{ flex: 1 }}>{tr("В радиусе 50 м уже есть активное задание — возможно, это повтор.")}</AppText>
         </View>
       )}
 
       {!rejecting ? (
         <>
-          <SectionHeader title="Опубликовать как задание" />
-          <TextField label="Название" value={title} onChangeText={setTitle} maxLength={80} />
-          <AppText variant="bodyStrong" style={{ marginBottom: space.x2 }}>
-            Сложность
-          </AppText>
+          <SectionHeader title={tr("Опубликовать как задание")} />
+          <TextField label={tr("Название")} value={title} onChangeText={setTitle} maxLength={80} />
+          <AppText variant="bodyStrong" style={{ marginBottom: space.x2 }}>{tr("Сложность")}</AppText>
           <View style={s.row}>
             {Object.entries(DIFFICULTY).map(([k, d]) => (
               <Chip key={k} label={`${d.label} · ${d.points} TZ`} active={difficulty === k} onPress={() => setDifficulty(k)} />
             ))}
           </View>
-          <Button label="Опубликовать на карте" icon="map-outline" onPress={() => review(true)} loading={busy} style={{ marginTop: space.x4 }} />
+          <Button label={tr("Опубликовать на карте")} icon="map-outline" onPress={() => review(true)} loading={busy} style={{ marginTop: space.x4 }} />
           <View style={[s.row, { marginTop: space.x2, gap: space.x2 }]}>
-            <Button label="Отклонить" variant="secondary" onPress={() => setRejecting(true)} disabled={busy} style={{ flex: 1 }} />
-            <Button label="Обман" icon="warning-outline" variant="danger" onPress={fraud} disabled={busy} style={{ flex: 1 }} />
+            <Button label={tr("Отклонить")} variant="secondary" onPress={() => setRejecting(true)} disabled={busy} style={{ flex: 1 }} />
+            <Button label={tr("Обман")} icon="warning-outline" variant="danger" onPress={fraud} disabled={busy} style={{ flex: 1 }} />
           </View>
         </>
       ) : (
         <View style={s.rejectBox}>
-          <AppText variant="overline" style={{ marginBottom: space.x2 }}>
-            Причина — её увидит автор
-          </AppText>
+          <AppText variant="overline" style={{ marginBottom: space.x2 }}>{tr("Причина — её увидит автор")}</AppText>
           {REJECT_REASONS.map((x) => (
             <Pressable key={x} style={({ pressed }) => [s.reason, pressed && { opacity: 0.6 }]} disabled={busy} onPress={() => review(false, x)}>
               <AppText variant="body" style={{ flex: 1 }}>
@@ -158,14 +152,14 @@ function ReportCard({ r, urls, onDone }: { r: Row; urls: Record<string, string>;
             </Pressable>
           ))}
           <TextField
-            placeholder="Или напишите свою причину"
+            placeholder={tr("Или напишите свою причину")}
             value={reason}
             onChangeText={setReason}
             multiline
             style={{ marginTop: space.x2, minHeight: 72, textAlignVertical: "top" }}
           />
-          <Button label="Отклонить с этой причиной" variant="secondary" disabled={busy || !reason.trim()} onPress={() => review(false, reason)} />
-          <Button label="Отмена" variant="ghost" onPress={() => setRejecting(false)} />
+          <Button label={tr("Отклонить с этой причиной")} variant="secondary" disabled={busy || !reason.trim()} onPress={() => review(false, reason)} />
+          <Button label={tr("Отмена")} variant="ghost" onPress={() => setRejecting(false)} />
         </View>
       )}
     </Card>
@@ -206,11 +200,11 @@ export function ReportsReview() {
 
   return (
     <>
-      <SectionHeader title="Заявки о загрязнении" hint={loading ? undefined : String(rows.length)} action="Обновить" onAction={load} />
+      <SectionHeader title={tr("Заявки о загрязнении")} hint={loading ? undefined : String(rows.length)} action={tr("Обновить")} onAction={load} />
       {loading && <SkeletonCard height={420} />}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && rows.length === 0 && (
-        <EmptyState icon="checkmark-done-outline" title="Новых заявок нет" text="Когда жители сообщат о загрязнении, заявки появятся здесь." />
+        <EmptyState icon="checkmark-done-outline" title={tr("Новых заявок нет")} text={tr("Когда жители сообщат о загрязнении, заявки появятся здесь.")} />
       )}
       {!loading && !error && rows.map((r) => <ReportCard key={r.id} r={r} urls={urls} onDone={load} />)}
     </>

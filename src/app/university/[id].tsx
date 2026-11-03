@@ -12,6 +12,7 @@ import { Skeleton, SkeletonCard } from "../../components/ui/skeleton";
 import { supabase } from "../../lib/supabase";
 import { color, font, radius, space } from "../../lib/theme";
 import { uniPrograms, uniTypeLabel, type Uni } from "../../lib/universities";
+import { tr, locale } from "../../lib/i18n";
 
 /** Подробная информация о вузе. Данные — та же таблица universities, по id. */
 export default function UniversityScreen() {
@@ -39,7 +40,7 @@ export default function UniversityScreen() {
     <Screen
       bottomInset
       footer={
-        u?.website ? <Button label="Открыть сайт" icon="open-outline" onPress={() => Linking.openURL(u.website!)} /> : undefined
+        u?.website ? <Button label={tr("Открыть сайт")} icon="open-outline" onPress={() => Linking.openURL(u.website!)} /> : undefined
       }
     >
       <BackButton />
@@ -53,7 +54,7 @@ export default function UniversityScreen() {
       )}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && !u && (
-        <EmptyState icon="school-outline" title="Вуз не найден" text="Возможно, его убрали из каталога." />
+        <EmptyState icon="school-outline" title={tr("Вуз не найден")} text={tr("Возможно, его убрали из каталога.")} />
       )}
 
       {!loading && u && (
@@ -66,8 +67,7 @@ export default function UniversityScreen() {
             </View>
           )}
           {u.photo_url && u.photo_credit ? (
-            <AppText variant="caption" color={color.faint} style={{ marginTop: 6 }}>
-              Фото: {u.photo_credit}
+            <AppText variant="caption" color={color.faint} style={{ marginTop: 6 }}>{tr("Фото:")}{" "}{u.photo_credit}
             </AppText>
           ) : null}
 
@@ -86,7 +86,7 @@ export default function UniversityScreen() {
 
           {u.description ? (
             <>
-              <SectionHeader title="О вузе" />
+              <SectionHeader title={tr("О вузе")} />
               <AppText variant="body" color={color.ink}>
                 {u.description}
               </AppText>
@@ -95,7 +95,7 @@ export default function UniversityScreen() {
 
           {u.requirements ? (
             <>
-              <SectionHeader title="Как поступить" />
+              <SectionHeader title={tr("Как поступить")} />
               <View style={s.req}>
                 <Icon name="school-outline" size={20} color={color.forest} />
                 <AppText variant="body" color={color.ink} style={{ flex: 1 }}>
@@ -107,7 +107,7 @@ export default function UniversityScreen() {
 
           {programs.length > 0 && (
             <>
-              <SectionHeader title="Направления" hint={String(programs.length)} />
+              <SectionHeader title={tr("Направления")} hint={String(programs.length)} />
               <View style={s.tags}>
                 {programs.map((p) => (
                   <View key={p} style={s.tag}>
@@ -122,8 +122,8 @@ export default function UniversityScreen() {
             <Icon name="information-circle-outline" size={16} color={color.muted} />
             <AppText variant="caption" style={{ flex: 1 }}>
               {u.checked_at
-                ? `Данные проверены: ${new Date(u.checked_at).toLocaleDateString("ru-RU")}. Точные сроки и условия уточняйте на официальном сайте.`
-                : "Актуальные данные уточняйте на официальном сайте."}
+                ? tr("Данные проверены: {0}. Точные сроки и условия уточняйте на официальном сайте.", new Date(u.checked_at).toLocaleDateString(locale()))
+                : tr("Актуальные данные уточняйте на официальном сайте.")}
             </AppText>
           </View>
         </>

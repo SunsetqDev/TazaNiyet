@@ -11,6 +11,7 @@ import { StatusPill } from "../components/ui/status-pill";
 import { reportCategory } from "../lib/reports";
 import { supabase } from "../lib/supabase";
 import { color, radius, space } from "../lib/theme";
+import { tr, locale } from "../lib/i18n";
 
 type Row = {
   id: number;
@@ -80,10 +81,8 @@ export default function MyReportsScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.forest]} tintColor={color.forest} />}
     >
       <BackButton />
-      <AppText variant="h1">Мои заявки</AppText>
-      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>
-        Места, о которых вы сообщили. Подтверждённые становятся заданиями на карте.
-      </AppText>
+      <AppText variant="h1">{tr("Мои заявки")}</AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x5 }}>{tr("Места, о которых вы сообщили. Подтверждённые становятся заданиями на карте.")}</AppText>
 
       {loading && (
         <View style={{ gap: space.x3 }}>
@@ -95,8 +94,8 @@ export default function MyReportsScreen() {
       {!loading && !error && rows.length === 0 && (
         <EmptyState
           icon="camera-outline"
-          title="Вы ещё не сообщали о загрязнении"
-          text="Заметили мусор или свалку? Нажмите ➕ внизу экрана — после проверки место уберут другие участники."
+          title={tr("Вы ещё не сообщали о загрязнении")}
+          text={tr("Заметили мусор или свалку? Нажмите ➕ внизу экрана — после проверки место уберут другие участники.")}
         />
       )}
 
@@ -118,7 +117,7 @@ export default function MyReportsScreen() {
                 <View style={{ flex: 1, gap: 4 }}>
                   <AppText variant="bodyStrong">{cat.label}</AppText>
                   <AppText variant="caption" numberOfLines={1}>
-                    {[r.address, new Date(r.created_at).toLocaleDateString("ru-RU")].filter(Boolean).join(" · ")}
+                    {[r.address, new Date(r.created_at).toLocaleDateString(locale())].filter(Boolean).join(" · ")}
                   </AppText>
                   <StatusPill status={r.status} />
                 </View>
@@ -130,9 +129,7 @@ export default function MyReportsScreen() {
                 <View style={s.reason}>
                   <Icon name="information-circle-outline" size={18} color={color.danger} />
                   <View style={{ flex: 1 }}>
-                    <AppText variant="bodyStrong" color={color.danger}>
-                      Почему отклонено
-                    </AppText>
+                    <AppText variant="bodyStrong" color={color.danger}>{tr("Почему отклонено")}</AppText>
                     <AppText variant="body" color={color.ink}>
                       {r.reject_reason}
                     </AppText>

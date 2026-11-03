@@ -3,6 +3,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { WebView, type WebViewMessageEvent, type WebViewProps } from "react-native-webview";
 import { color } from "../lib/theme";
 import { AppText } from "./ui/app-text";
+import { tr } from "../lib/i18n";
 
 /**
  * Карта OpenStreetMap (тайлы OpenFreeMap, библиотека MapLibre GL JS) во встроенном WebView.
@@ -148,10 +149,8 @@ export const OsmMap = forwardRef<OsmMapHandle, Props>(function OsmMap(
       />
       {failed && (
         <View style={s.fail}>
-          <AppText variant="bodyStrong">Карта не загрузилась</AppText>
-          <AppText variant="caption" style={{ textAlign: "center" }}>
-            Проверьте интернет и откройте экран ещё раз
-          </AppText>
+          <AppText variant="bodyStrong">{tr("Карта не загрузилась")}</AppText>
+          <AppText variant="caption" style={{ textAlign: "center" }}>{tr("Проверьте интернет и откройте экран ещё раз")}</AppText>
         </View>
       )}
     </View>

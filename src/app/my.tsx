@@ -15,13 +15,14 @@ import { reportCategory } from "../lib/reports";
 import { SPOT_STATUS, timeLeft } from "../lib/spot-tasks";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
+import { tr, locale, lang } from "../lib/i18n";
 
 type Row = {
   id: number;
   status: string;
   created_at: string;
   reject_reason: string | null;
-  tasks: { emoji: string; title: string; points: number; category: string | null } | null;
+  tasks: { emoji: string; title: string; title_kk?: string | null; points: number; category: string | null } | null;
 };
 
 /** Уборка места с карты (RPC get_my_spot_tasks). */
@@ -68,11 +69,16 @@ export default function MyScreen() {
 
     const { data, error } = await supabase
       .from("submissions")
-      .select("id, status, created_at, reject_reason, tasks(emoji, title, points, category)")
+      .select("id, status, created_at, reject_reason, tasks(emoji, title, title_kk, points, category)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) setError(error.message);
-    else setRows(data as unknown as Row[]);
+    else
+      setRows(
+        (data as unknown as Row[]).map((r) =>
+          lang() === "kk" && r.tasks?.title_kk ? { ...r, tasks: { ...r.tasks, title: r.tasks.title_kk } } : r
+        )
+      );
 
     const { data: st } = await supabase.rpc("get_my_spot_tasks");
     setSpots((st ?? []) as Spot[]);
@@ -100,12 +106,12 @@ export default function MyScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.forest]} tintColor={color.forest} />}
     >
       <BackButton />
-      <AppText variant="h1">Мои задания</AppText>
+      <AppText variant="h1">{tr("Мои задания")}</AppText>
 
       <View style={s.summary}>
-        <Sum value={points} label="очков TZ" />
-        <Sum value={approved} label="принято" />
-        <Sum value={pending} label="на проверке" />
+        <Sum value={points} label={tr("очков TZ")} />
+        <Sum value={approved} label={tr("принято")} />
+        <Sum value={pending} label={tr("на проверке")} />
       </View>
 
       {loading && (
@@ -119,7 +125,7 @@ export default function MyScreen() {
 
       {!loading && !error && spots.length > 0 && (
         <>
-          <SectionHeader title="Уборка мест с карты" />
+          <SectionHeader title={tr("Уборка мест с карты")} />
           <View style={s.group}>
             {spots.map((t, i) => (
               <ListRow
@@ -129,10 +135,10 @@ export default function MyScreen() {
                 subtitle={
                   t.status === "in_progress"
                     ? t.last_reject_reason
-                      ? `Вернули: ${t.last_reject_reason}`
-                      : `Осталось ${timeLeft(t.claim_expires_at)}`
+                      ? tr("Вернули: {0}", t.last_reject_reason)
+                      : tr("Осталось {0}", timeLeft(t.claim_expires_at))
                     : t.status === "completed" && t.completed_at
-                    ? `Выполнено ${new Date(t.completed_at).toLocaleDateString("ru-RU")}`
+                    ? tr("Выполнено {0}", new Date(t.completed_at).toLocaleDateString(locale()))
                     : SPOT_STATUS[t.status] ?? t.status
                 }
                 onPress={() => router.push({ pathname: "/spot/[id]", params: { id: String(t.id) } })}
@@ -145,16 +151,16 @@ export default function MyScreen() {
               />
             ))}
           </View>
-          {rows.length > 0 && <SectionHeader title="Повседневные задания" />}
+          {rows.length > 0 && <SectionHeader title={tr("Повседневные задания")} />}
         </>
       )}
 
       {!loading && !error && rows.length === 0 && spots.length === 0 && (
         <EmptyState
           icon="leaf-outline"
-          title="Пока нет заявок"
-          text="Выполните первое задание — здесь появится его статус."
-          action="К заданиям"
+          title={tr("Пока нет заявок")}
+          text={tr("Выполните первое задание — здесь появится его статус.")}
+          action={tr("К заданиям")}
           onAction={() => router.replace("/")}
         />
       )}
@@ -168,8 +174,8 @@ export default function MyScreen() {
                 <TaskArt category={r.tasks?.category} emoji={r.tasks?.emoji} size={28} />
               </RowIcon>
               <View style={{ flex: 1, gap: 4 }}>
-                <AppText variant="bodyStrong">{r.tasks?.title ?? "Задание"}</AppText>
-                <AppText variant="caption">{new Date(r.created_at).toLocaleDateString("ru-RU")}</AppText>
+                <AppText variant="bodyStrong">{r.tasks?.title ?? tr("Задание")}</AppText>
+                <AppText variant="caption">{new Date(r.created_at).toLocaleDateString(locale())}</AppText>
                 <StatusPill status={r.status} />
               </View>
               <AppText style={[s.pts, r.status !== "approved" && { color: color.faint }]}>+{r.tasks?.points ?? 0}</AppText>
@@ -179,9 +185,7 @@ export default function MyScreen() {
               <View style={s.reason}>
                 <Icon name="information-circle-outline" size={18} color={color.danger} />
                 <View style={{ flex: 1 }}>
-                  <AppText variant="bodyStrong" color={color.danger}>
-                    Почему отклонено
-                  </AppText>
+                  <AppText variant="bodyStrong" color={color.danger}>{tr("Почему отклонено")}</AppText>
                   <AppText variant="body" color={color.ink}>
                     {r.reject_reason}
                   </AppText>

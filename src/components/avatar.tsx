@@ -24,7 +24,7 @@ export function Avatar({ name, emoji, color, photo, size = 52 }: Props) {
       {emoji ? (
         <Text style={{ fontSize: size * 0.52 }}>{emoji}</Text>
       ) : (
-        <Text style={{ fontSize: size * 0.42, fontFamily: font.semibold, color: palette.ink }}>
+        <Text style={{ fontSize: size * 0.42, fontFamily: font.semibold, color: "#252A27" /* фон аватара всегда светлый */ }}>
           {(name || "?").charAt(0).toUpperCase()}
         </Text>
       )}

@@ -13,3 +13,8 @@ export async function avatarUrl(path: string | null | undefined): Promise<string
   cache.set(path, { url: data.signedUrl, until: Date.now() + 50 * 60 * 1000 });
   return data.signedUrl;
 }
+
+/** Сбросить сохранённые ссылки на фото (настройки → «Очистить кэш»). */
+export function clearAvatarCache() {
+  cache.clear();
+}

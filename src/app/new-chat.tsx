@@ -13,6 +13,7 @@ import { TextField } from "../components/ui/text-field";
 import { chatError, type FoundUser } from "../lib/chat";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
+import { tr } from "../lib/i18n";
 
 /** Новый чат: поиск по нику. ?group=1 — создать группу из нескольких человек, ?add=<id> — добавить в группу. */
 export default function NewChatScreen() {
@@ -50,7 +51,7 @@ export default function NewChatScreen() {
     const { data, error } = await supabase.rpc("open_direct", { p_user: u.id });
     setBusy(false);
     if (error) {
-      Alert.alert("Не получилось", chatError(error));
+      Alert.alert(tr("Не получилось"), chatError(error));
       return;
     }
     router.replace({ pathname: "/chat/[id]", params: { id: String(data) } });
@@ -68,7 +69,7 @@ export default function NewChatScreen() {
         : await supabase.rpc("create_group", { p_title: title, p_members: ids });
     setBusy(false);
     if (error) {
-      Alert.alert("Не получилось", chatError(error));
+      Alert.alert(tr("Не получилось"), chatError(error));
       return;
     }
     if (addTo !== null) router.back();
@@ -77,7 +78,7 @@ export default function NewChatScreen() {
 
   const footer = multi ? (
     <Button
-      label={addTo !== null ? `Добавить (${picked.length})` : `Создать группу (${picked.length + 1})`}
+      label={addTo !== null ? tr("Добавить ({0})", picked.length) : tr("Создать группу ({0})", picked.length + 1)}
       onPress={submit}
       loading={busy}
       disabled={picked.length === 0 || (addTo === null && !title.trim())}
@@ -88,12 +89,12 @@ export default function NewChatScreen() {
     <Screen bottomInset footer={footer}>
       <BackButton />
       <AppText variant="h1" style={{ marginTop: space.x4 }}>
-        {addTo !== null ? "Добавить участников" : multi ? "Новая группа" : "Новый чат"}
+        {addTo !== null ? tr("Добавить участников") : multi ? tr("Новая группа") : tr("Новый чат")}
       </AppText>
 
       {multi && addTo === null && (
         <View style={{ marginTop: space.x4 }}>
-          <TextField label="Название группы" placeholder="Например: Уборка парка" maxLength={60} value={title} onChangeText={setTitle} />
+          <TextField label={tr("Название группы")} placeholder={tr("Например: Уборка парка")} maxLength={60} value={title} onChangeText={setTitle} />
         </View>
       )}
 
@@ -112,18 +113,18 @@ export default function NewChatScreen() {
 
       <View style={{ marginTop: space.x4 }}>
         <TextField
-          label={multi ? "Участники" : undefined}
-          placeholder="Ник участника"
+          label={multi ? tr("Участники") : undefined}
+          placeholder={tr("Ник участника")}
           autoCapitalize="none"
           autoCorrect={false}
           value={query}
           onChangeText={setQuery}
-          hint={searching ? "Ищем…" : "Введите хотя бы 2 буквы ника"}
+          hint={searching ? tr("Ищем…") : tr("Введите хотя бы 2 буквы ника")}
         />
       </View>
 
       {query.trim().length >= 2 && !searching && found.length === 0 && (
-        <EmptyState icon="search-outline" title="Никого не нашли" text="Проверьте ник. Найти можно только тех, у кого в профиле указан ник." />
+        <EmptyState icon="search-outline" title={tr("Никого не нашли")} text={tr("Проверьте ник. Найти можно только тех, у кого в профиле указан ник.")} />
       )}
 
       {found.length > 0 && (

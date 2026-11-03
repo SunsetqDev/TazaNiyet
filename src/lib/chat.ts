@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { locale, tr, trs } from "./i18n";
 
 // Мессенджер: личные чаты и группы. Всё меняется только через RPC в Supabase (см. CLAUDE.md → «Мессенджер»),
 // новые сообщения приходят через Realtime (таблица messages, RLS — только участники чата).
@@ -48,20 +49,20 @@ export const MAX_MESSAGE = 1000;
 export function chatTime(iso: string) {
   const d = new Date(iso);
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
   const days = (now.getTime() - d.getTime()) / 86400000;
-  if (days < 6) return d.toLocaleDateString("ru-RU", { weekday: "short" });
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  if (days < 6) return d.toLocaleDateString(locale(), { weekday: "short" });
+  return d.toLocaleDateString(locale(), { day: "numeric", month: "short" });
 }
 
 export function messageTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 /** Текст ошибки RPC для пользователя (сервер возвращает понятные русские сообщения). */
 export function chatError(e: { message?: string } | null | undefined) {
   const m = e?.message ?? "";
-  return /[а-яё]/i.test(m) ? m : "Проверьте интернет и попробуйте снова.";
+  return /[а-яё]/i.test(m) ? trs(m) : tr("Проверьте интернет и попробуйте снова.");
 }
 
 /** Подписка на новые и изменённые сообщения во всех моих чатах (RLS отдаёт только свои). */

@@ -19,6 +19,8 @@ export const color = {
   warnSoft: "#FFF4D6",
   danger: "#B3261E",
   dangerSoft: "#FBEAE8",
+  /** тёмный текст и иконки на лаймовой заливке (в обеих темах тёмный) */
+  onLime: "#153D2C",
 };
 
 /** Мягкие подложки категорий заданий — только за иконкой, не на всю карточку. */
@@ -54,6 +56,7 @@ const DARK: typeof color = {
   warnSoft: "#3A3013",
   danger: "#FF8A80",
   dangerSoft: "#3D1F1C",
+  onLime: "#10251A",
 };
 const DARK_TINT: Record<string, string> = {
   clean: "#22331F",

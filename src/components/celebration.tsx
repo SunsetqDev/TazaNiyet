@@ -7,6 +7,7 @@ import { Confetti } from "./confetti";
 import { Mascot } from "./mascot";
 import { AppText } from "./ui/app-text";
 import { Button } from "./ui/button";
+import { tr } from "../lib/i18n";
 
 type Props = {
   visible: boolean;
@@ -30,7 +31,7 @@ export function Celebration({ visible, gained, rank, onClose }: Props) {
             <Mascot mood="cheer" size={140} />
           </View>
           <AppText variant="overline" color={color.forest} style={{ marginTop: space.x4 }}>
-            {rank ? "Новый ранг" : "Задание принято"}
+            {rank ? tr("Новый ранг") : tr("Задание принято")}
           </AppText>
           <AppText style={s.big}>+{gained} TZ</AppText>
           {rank && (
@@ -41,7 +42,7 @@ export function Celebration({ visible, gained, rank, onClose }: Props) {
               </AppText>
             </View>
           )}
-          <Button label="Ура!" onPress={onClose} style={{ alignSelf: "stretch", marginTop: space.x5 }} />
+          <Button label={tr("Ура!")} onPress={onClose} style={{ alignSelf: "stretch", marginTop: space.x5 }} />
         </Animated.View>
       </View>
     </Modal>

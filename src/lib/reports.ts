@@ -1,15 +1,16 @@
 import type { IconName } from "../components/icon";
 import * as Location from "expo-location";
 import { Alert } from "react-native";
+import { tr } from "./i18n";
 
 /** Категории загрязнения — те же ключи, что в ограничении reports.category в базе. */
 export const REPORT_CATEGORIES: { k: string; label: string; icon: IconName }[] = [
-  { k: "park", label: "Мусор в парке", icon: "leaf-outline" },
-  { k: "dump", label: "Стихийная свалка", icon: "trash-bin-outline" },
-  { k: "road", label: "Мусор у дороги", icon: "car-outline" },
-  { k: "river", label: "Загрязнение у воды", icon: "water-outline" },
-  { k: "yard", label: "Двор или улица", icon: "home-outline" },
-  { k: "other", label: "Другое", icon: "ellipsis-horizontal" },
+  { k: "park", label: tr("Мусор в парке"), icon: "leaf-outline" },
+  { k: "dump", label: tr("Стихийная свалка"), icon: "trash-bin-outline" },
+  { k: "road", label: tr("Мусор у дороги"), icon: "car-outline" },
+  { k: "river", label: tr("Загрязнение у воды"), icon: "water-outline" },
+  { k: "yard", label: tr("Двор или улица"), icon: "home-outline" },
+  { k: "other", label: tr("Другое"), icon: "ellipsis-horizontal" },
 ];
 
 export const reportCategory = (k: string) => REPORT_CATEGORIES.find((c) => c.k === k) ?? REPORT_CATEGORIES[5];
@@ -24,18 +25,18 @@ export const KZ_ZOOM = 4;
 export async function getCurrentCoords(): Promise<Coords | null> {
   const perm = await Location.requestForegroundPermissionsAsync();
   if (!perm.granted) {
-    Alert.alert("Нет доступа к местоположению", "Разрешите геолокацию в настройках телефона или отметьте место на карте вручную.");
+    Alert.alert(tr("Нет доступа к местоположению"), tr("Разрешите геолокацию в настройках телефона или отметьте место на карте вручную."));
     return null;
   }
   if (!(await Location.hasServicesEnabledAsync())) {
-    Alert.alert("Геолокация выключена", "Включите местоположение в шторке телефона или отметьте место на карте вручную.");
+    Alert.alert(tr("Геолокация выключена"), tr("Включите местоположение в шторке телефона или отметьте место на карте вручную."));
     return null;
   }
   try {
     const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
     return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? null };
   } catch {
-    Alert.alert("Не удалось определить место", "Выйдите на открытое место и попробуйте ещё раз или отметьте точку на карте.");
+    Alert.alert(tr("Не удалось определить место"), tr("Выйдите на открытое место и попробуйте ещё раз или отметьте точку на карте."));
     return null;
   }
 }

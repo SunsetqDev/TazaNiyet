@@ -12,6 +12,7 @@ import { SectionHeader } from "../components/ui/section-header";
 import { takePhoto, uploadPhoto, type Photo } from "../lib/photos";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
+import { tr, trs } from "../lib/i18n";
 
 function PhotoSlot({ label, photo, onPress, disabled }: { label: string; photo: Photo | null; onPress: () => void; disabled: boolean }) {
   return (
@@ -40,8 +41,8 @@ function PhotoSlot({ label, photo, onPress, disabled }: { label: string; photo: 
               <Icon name="camera-outline" size={26} color={color.forest} />
             </IconBlob>
           </View>
-          <AppText variant="bodyStrong">Фото {label.toLowerCase()}</AppText>
-          <AppText variant="caption">нажмите, чтобы снять</AppText>
+          <AppText variant="bodyStrong">{tr("Фото")}{" "}{label.toLowerCase()}</AppText>
+          <AppText variant="caption">{tr("нажмите, чтобы снять")}</AppText>
         </>
       )}
     </Pressable>
@@ -70,7 +71,7 @@ export default function TaskScreen() {
 
   const submit = async () => {
     if (!before || !after) {
-      Alert.alert("Нужны оба фото", "Сделайте фото «до» и «после».");
+      Alert.alert(tr("Нужны оба фото"), tr("Сделайте фото «до» и «после»."));
       return;
     }
     setSending(true);
@@ -90,14 +91,14 @@ export default function TaskScreen() {
       });
       if (error) {
         if (error.code === "23505") {
-          Alert.alert("Уже отправлено", "Это задание уже на проверке. Дождитесь результата.");
+          Alert.alert(tr("Уже отправлено"), tr("Это задание уже на проверке. Дождитесь результата."));
           return;
         }
         throw error;
       }
       setSent(true);
     } catch (e: any) {
-      Alert.alert("Не удалось отправить", e?.message ?? "Проверьте интернет и попробуйте снова.");
+      Alert.alert(tr("Не удалось отправить"), trs(e?.message) ?? tr("Проверьте интернет и попробуйте снова."));
     } finally {
       setSending(false);
     }
@@ -113,10 +114,10 @@ export default function TaskScreen() {
           <View style={{ gap: space.x2 }}>
             {!ready && (
               <AppText variant="caption" style={{ textAlign: "center" }}>
-                {before ? "Осталось фото после" : "Сначала сфотографируйте место до"}
+                {before ? tr("Осталось фото после") : tr("Сначала сфотографируйте место до")}
               </AppText>
             )}
-            <Button label="Отправить на проверку" icon="paper-plane-outline" onPress={submit} loading={sending} />
+            <Button label={tr("Отправить на проверку")} icon="paper-plane-outline" onPress={submit} loading={sending} />
           </View>
         )
       }
@@ -135,21 +136,19 @@ export default function TaskScreen() {
         {title}
       </AppText>
 
-      <SectionHeader title="Как выполнить" />
+      <SectionHeader title={tr("Как выполнить")} />
       <AppText variant="body" color={color.ink}>
         {description}
       </AppText>
 
-      <SectionHeader title="Фото" hint="до и после" />
+      <SectionHeader title={tr("Фото")} hint={tr("до и после")} />
       <View style={s.row}>
-        <PhotoSlot label="До" photo={before} onPress={() => snap(setBefore)} disabled={sent} />
-        <PhotoSlot label="После" photo={after} onPress={() => snap(setAfter)} disabled={sent} />
+        <PhotoSlot label={tr("До")} photo={before} onPress={() => snap(setBefore)} disabled={sent} />
+        <PhotoSlot label={tr("После")} photo={after} onPress={() => snap(setAfter)} disabled={sent} />
       </View>
       <View style={s.note}>
         <Icon name="lock-closed-outline" size={14} color={color.muted} />
-        <AppText variant="caption" style={{ flex: 1 }}>
-          Фото видят только проверяющие. В портфолио они не показываются.
-        </AppText>
+        <AppText variant="caption" style={{ flex: 1 }}>{tr("Фото видят только проверяющие. В портфолио они не показываются.")}</AppText>
       </View>
 
       {sent && (
@@ -157,13 +156,9 @@ export default function TaskScreen() {
           <View style={s.successIcon}>
             <Icon name="checkmark" size={28} color={color.forest} />
           </View>
-          <AppText variant="h2" style={{ textAlign: "center" }}>
-            Отправлено на проверку
-          </AppText>
-          <AppText variant="body" color={color.muted} style={{ textAlign: "center" }}>
-            Очки TZ появятся после проверки. Статус — в профиле, в «Моих заданиях».
-          </AppText>
-          <Button label="К заданиям" variant="secondary" onPress={() => router.replace("/")} style={{ marginTop: space.x2, alignSelf: "stretch" }} />
+          <AppText variant="h2" style={{ textAlign: "center" }}>{tr("Отправлено на проверку")}</AppText>
+          <AppText variant="body" color={color.muted} style={{ textAlign: "center" }}>{tr("Очки TZ появятся после проверки. Статус — в профиле, в «Моих заданиях».")}</AppText>
+          <Button label={tr("К заданиям")} variant="secondary" onPress={() => router.replace("/")} style={{ marginTop: space.x2, alignSelf: "stretch" }} />
         </Animated.View>
       )}
     </Screen>

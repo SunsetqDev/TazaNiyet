@@ -1,4 +1,5 @@
 import { Linking } from "react-native";
+import { tr } from "./i18n";
 
 /** Задание на карте (то, что отдаёт RPC get_map_tasks). */
 export type MapTask = {
@@ -43,18 +44,18 @@ export type SpotTask = {
 };
 
 export const DIFFICULTY: Record<string, { label: string; points: number }> = {
-  easy: { label: "Лёгкое", points: 30 },
-  medium: { label: "Среднее", points: 60 },
-  hard: { label: "Сложное", points: 100 },
+  easy: { label: tr("Лёгкое"), points: 30 },
+  medium: { label: tr("Среднее"), points: 60 },
+  hard: { label: tr("Сложное"), points: 100 },
 };
 
 /** Подпись статуса задания на карте. */
 export const SPOT_STATUS: Record<string, string> = {
-  available: "Доступно",
-  in_progress: "Выполняется",
-  under_review: "Результат на проверке",
-  completed: "Выполнено",
-  cancelled: "Снято",
+  available: tr("Доступно"),
+  in_progress: tr("Выполняется"),
+  under_review: tr("Результат на проверке"),
+  completed: tr("Выполнено"),
+  cancelled: tr("Снято"),
 };
 
 /** Радиус, в котором принимается фото результата (тот же, что проверяет сервер). */
@@ -71,17 +72,17 @@ export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number
 }
 
 export function formatDistance(m: number) {
-  if (m < 1000) return `${Math.round(m / 10) * 10} м`;
-  return `${(m / 1000).toFixed(m < 10000 ? 1 : 0).replace(".", ",")} км`;
+  if (m < 1000) return tr("{0} м", Math.round(m / 10) * 10);
+  return tr("{0} км", (m / 1000).toFixed(m < 10000 ? 1 : 0).replace(".", ","));
 }
 
 /** Сколько осталось до конца брони: «47 ч», «35 мин». */
 export function timeLeft(iso: string | null) {
   if (!iso) return "";
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return "время вышло";
+  if (ms <= 0) return tr("время вышло");
   const h = Math.floor(ms / 3600000);
-  return h >= 1 ? `${h} ч` : `${Math.max(1, Math.round(ms / 60000))} мин`;
+  return h >= 1 ? tr("{0} ч", h) : tr("{0} мин", Math.max(1, Math.round(ms / 60000)));
 }
 
 /** Маршрут пешком в Google Картах; если приложения нет — откроется сайт карт. */

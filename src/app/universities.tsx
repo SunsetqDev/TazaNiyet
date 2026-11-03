@@ -12,6 +12,7 @@ import { SkeletonCard } from "../components/ui/skeleton";
 import { supabase } from "../lib/supabase";
 import { color, font, radius, space } from "../lib/theme";
 import { uniPrograms, uniTypeLabel, type Uni } from "../lib/universities";
+import { tr } from "../lib/i18n";
 
 function UniCard({ u, onPress }: { u: Uni; onPress: () => void }) {
   const programs = uniPrograms(u);
@@ -93,16 +94,14 @@ export default function UniversitiesScreen() {
   return (
     <Screen bottomInset>
       <BackButton />
-      <AppText variant="h1">Вузы и колледжи</AppText>
-      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>
-        Куда можно поступить в Казахстане
-      </AppText>
+      <AppText variant="h1">{tr("Вузы и колледжи")}</AppText>
+      <AppText variant="body" color={color.muted} style={{ marginTop: space.x1, marginBottom: space.x4 }}>{tr("Куда можно поступить в Казахстане")}</AppText>
 
       <View style={s.search}>
         <Icon name="search-outline" size={20} color={color.muted} />
         <TextInput
           style={s.searchInput}
-          placeholder="Поиск по названию"
+          placeholder={tr("Поиск по названию")}
           placeholderTextColor={color.faint}
           cursorColor={color.forest}
           value={query}
@@ -117,19 +116,18 @@ export default function UniversitiesScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chips} contentContainerStyle={s.chipsIn}>
-        <Chip label="Все" active={type === "all"} onPress={() => setType("all")} />
-        <Chip label="Вузы" active={type === "university"} onPress={() => setType("university")} />
-        <Chip label="Колледжи" active={type === "college"} onPress={() => setType("college")} />
+        <Chip label={tr("Все")} active={type === "all"} onPress={() => setType("all")} />
+        <Chip label={tr("Вузы")} active={type === "university"} onPress={() => setType("university")} />
+        <Chip label={tr("Колледжи")} active={type === "college"} onPress={() => setType("college")} />
       </ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chips} contentContainerStyle={s.chipsIn}>
         {cities.map((c) => (
-          <Chip key={c} label={c} active={city === c} onPress={() => setCity(c)} />
+          <Chip key={c} label={c === "Все" ? tr("Все") : c} active={city === c} onPress={() => setCity(c)} />
         ))}
       </ScrollView>
 
       {!loading && !error && (
-        <AppText variant="caption" style={{ marginTop: space.x4, marginBottom: space.x3 }}>
-          Найдено: {filtered.length}
+        <AppText variant="caption" style={{ marginTop: space.x4, marginBottom: space.x3 }}>{tr("Найдено:")}{" "}{filtered.length}
         </AppText>
       )}
 
@@ -143,9 +141,9 @@ export default function UniversitiesScreen() {
       {!loading && !error && filtered.length === 0 && (
         <EmptyState
           icon="search-outline"
-          title="Ничего не найдено"
-          text={filtersOn ? "Попробуйте изменить запрос или фильтры." : "Каталог пока пуст."}
-          action={filtersOn ? "Сбросить фильтры" : undefined}
+          title={tr("Ничего не найдено")}
+          text={filtersOn ? tr("Попробуйте изменить запрос или фильтры.") : tr("Каталог пока пуст.")}
+          action={filtersOn ? tr("Сбросить фильтры") : undefined}
           onAction={reset}
         />
       )}

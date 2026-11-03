@@ -2,18 +2,19 @@ import { Icon, type IconName } from "../icon";
 import { StyleSheet, View } from "react-native";
 import { color, font, radius, space } from "../../lib/theme";
 import { AppText } from "./app-text";
+import { tr } from "../../lib/i18n";
 
 const STATUS: Record<string, { label: string; icon: IconName; fg: string; bg: string }> = {
-  pending: { label: "На проверке", icon: "time-outline", fg: color.warn, bg: color.warnSoft },
-  approved: { label: "Принято", icon: "checkmark-circle-outline", fg: color.forest, bg: color.limeSoft },
-  rejected: { label: "Отклонено", icon: "close-circle-outline", fg: color.danger, bg: color.dangerSoft },
+  pending: { label: tr("На проверке"), icon: "time-outline", fg: color.warn, bg: color.warnSoft },
+  approved: { label: tr("Принято"), icon: "checkmark-circle-outline", fg: color.forest, bg: color.limeSoft },
+  rejected: { label: tr("Отклонено"), icon: "close-circle-outline", fg: color.danger, bg: color.dangerSoft },
   // заявки о загрязнении (reports.status)
-  submitted: { label: "Отправлено", icon: "paper-plane-outline", fg: color.muted, bg: color.sand },
-  under_review: { label: "На проверке", icon: "time-outline", fg: color.warn, bg: color.warnSoft },
+  submitted: { label: tr("Отправлено"), icon: "paper-plane-outline", fg: color.muted, bg: color.sand },
+  under_review: { label: tr("На проверке"), icon: "time-outline", fg: color.warn, bg: color.warnSoft },
   // задания на карте (spot_tasks.status)
-  available: { label: "Доступно", icon: "leaf-outline", fg: color.forest, bg: color.limeSoft },
-  in_progress: { label: "Выполняется", icon: "walk-outline", fg: color.ink, bg: color.sand },
-  completed: { label: "Выполнено", icon: "checkmark-done-outline", fg: color.forest, bg: color.limeSoft },
+  available: { label: tr("Доступно"), icon: "leaf-outline", fg: color.forest, bg: color.limeSoft },
+  in_progress: { label: tr("Выполняется"), icon: "walk-outline", fg: color.ink, bg: color.sand },
+  completed: { label: tr("Выполнено"), icon: "checkmark-done-outline", fg: color.forest, bg: color.limeSoft },
 };
 
 /** Статус заявки: submissions.status (pending / approved / rejected) или reports.status (+ submitted / under_review). */

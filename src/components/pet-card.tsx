@@ -8,6 +8,7 @@ import { CountUp } from "./anim";
 import { LivingTree } from "./living-tree";
 import { Mascot, MascotMood } from "./mascot";
 import { AppText } from "./ui/app-text";
+import { tr } from "../lib/i18n";
 
 type Props = {
   points: number;
@@ -20,8 +21,8 @@ type Props = {
   pending: number;
 };
 
-const QUIPS_HAPPY = ["Щекотно! 😄", "Ты молодец!", "Давай сделаем мир чище!", "Я тоже люблю баобабы 🌳", "Ещё одно задание? 😉"];
-const QUIPS_SAD = ["Мне грустно… 🥺", "Сделай хотя бы одно задание?", "Баобабу нужна вода 💧"];
+const QUIPS_HAPPY = [tr("Щекотно! 😄"), tr("Ты молодец!"), tr("Давай сделаем мир чище!"), tr("Я тоже люблю баобабы 🌳"), tr("Ещё одно задание? 😉")];
+const QUIPS_SAD = [tr("Мне грустно… 🥺"), tr("Сделай хотя бы одно задание?"), tr("Баобабу нужна вода 💧")];
 
 function healthFromDays(d: number | null) {
   if (d === null || d <= 1) return 0;
@@ -71,18 +72,18 @@ export function PetCard({ points, streak, daysSince, approved, pending }: Props)
   let mood: MascotMood = "happy";
   let msg = "";
   if (daysSince === null) {
-    msg = "Привет! Я Барс. Выполни первое задание, и твой росток пойдёт в рост 🌱";
+    msg = tr("Привет! Я Барс. Выполни первое задание, и твой росток пойдёт в рост 🌱");
   } else if (health === 0) {
     mood = streak >= 3 ? "cheer" : "happy";
-    msg = streak >= 3 ? `${streak} дн. подряд! Баобаб в восторге 🔥` : "Баобаб доволен. Так держать!";
+    msg = streak >= 3 ? tr("{0} дн. подряд! Баобаб в восторге 🔥", streak) : tr("Баобаб доволен. Так держать!");
   } else if (health === 1) {
-    msg = "Баобабу немного грустно. Сделай задание сегодня!";
+    msg = tr("Баобабу немного грустно. Сделай задание сегодня!");
   } else if (health === 2) {
     mood = "sad";
-    msg = "Листья вянут… Баобаб скучает по тебе";
+    msg = tr("Листья вянут… Баобаб скучает по тебе");
   } else {
     mood = "sad";
-    msg = "Баобаб совсем завял. Одно задание, и он оживёт!";
+    msg = tr("Баобаб совсем завял. Одно задание, и он оживёт!");
   }
 
   const onTap = () => {
@@ -96,8 +97,7 @@ export function PetCard({ points, streak, daysSince, approved, pending }: Props)
 
   return (
     <View style={s.card}>
-      <AppText variant="overline" color={color.lime}>
-        Ранг · {rank.name}
+      <AppText variant="overline" color={color.lime}>{tr("Ранг ·")}{" "}{rank.name}
       </AppText>
       <View style={s.ptsRow}>
         <CountUp value={points} style={s.pts} />
@@ -125,13 +125,13 @@ export function PetCard({ points, streak, daysSince, approved, pending }: Props)
         <Animated.View style={[s.barFill, barStyle]} />
       </View>
       <AppText variant="caption" color={color.onForestMuted} style={{ marginTop: space.x1 }}>
-        {next ? `Ещё ${next - points} TZ до ранга «${RANKS[stage + 1].name}»` : "Высший ранг — ты хранитель степи"}
+        {next ? tr("Ещё {0} TZ до ранга «{1}»", next - points, RANKS[stage + 1].name) : tr("Высший ранг — ты хранитель степи")}
       </AppText>
 
       <View style={s.stats}>
-        <Stat icon="flame" value={streak} label="дней подряд" />
-        <Stat icon="checkmark-circle" value={approved} label="принято" />
-        <Stat icon="hourglass-outline" value={pending} label="на проверке" />
+        <Stat icon="flame" value={streak} label={tr("дней подряд")} />
+        <Stat icon="checkmark-circle" value={approved} label={tr("принято")} />
+        <Stat icon="hourglass-outline" value={pending} label={tr("на проверке")} />
       </View>
     </View>
   );

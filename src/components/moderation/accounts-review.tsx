@@ -9,6 +9,7 @@ import { Card } from "../ui/card";
 import { EmptyState, ErrorState } from "../ui/empty-state";
 import { SectionHeader } from "../ui/section-header";
 import { SkeletonCard } from "../ui/skeleton";
+import { tr, locale } from "../../lib/i18n";
 
 type Row = {
   user_id: string;
@@ -21,8 +22,8 @@ type Row = {
   kind: "fraud" | "inactive";
 };
 
-const REASON = { fraud: "Многочисленный обман", inactive: "Неактивен больше 6 месяцев" };
-const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("ru-RU") : "—");
+const REASON = { fraud: tr("Многочисленный обман"), inactive: tr("Неактивен больше 6 месяцев") };
+const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString(locale()) : "—");
 
 function AccountCard({ r, onDone }: { r: Row; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -35,25 +36,25 @@ function AccountCard({ r, onDone }: { r: Row; onDone: () => void }) {
     });
     setBusy(false);
     if (error) {
-      let msg = "Проверьте интернет и попробуйте снова.";
+      let msg = tr("Проверьте интернет и попробуйте снова.");
       try {
         const body = await (error as any)?.context?.json();
         if (body?.error) msg = body.error;
       } catch {}
-      Alert.alert("Не удалось удалить", msg);
+      Alert.alert(tr("Не удалось удалить"), msg);
       return;
     }
-    Alert.alert("Аккаунт удалён", `${r.display_name}: профиль, заявки и фото удалены.`);
+    Alert.alert(tr("Аккаунт удалён"), tr("{0}: профиль, заявки и фото удалены.", r.display_name));
     onDone();
   };
 
   const confirm = () =>
     Alert.alert(
-      "Удалить аккаунт?",
-      `${r.display_name} — ${REASON[r.kind].toLowerCase()}. Профиль, заявки, фото и очки удалятся навсегда, отменить нельзя.`,
+      tr("Удалить аккаунт?"),
+      tr("{0} — {1}. Профиль, заявки, фото и очки удалятся навсегда, отменить нельзя.", r.display_name, REASON[r.kind].toLowerCase()),
       [
-        { text: "Отмена", style: "cancel" },
-        { text: "Удалить", style: "destructive", onPress: remove },
+        { text: tr("Отмена"), style: "cancel" },
+        { text: tr("Удалить"), style: "destructive", onPress: remove },
       ]
     );
 
@@ -73,15 +74,13 @@ function AccountCard({ r, onDone }: { r: Row; onDone: () => void }) {
         </View>
       </View>
       <View style={s.facts}>
-        <AppText variant="caption">
-          Нарушений за 90 дней: <AppText style={[s.num, fraud && { color: color.danger }]}>{r.penalties}</AppText>
-          {r.last_penalty_at ? ` · последнее ${fmt(r.last_penalty_at)}` : ""}
+        <AppText variant="caption">{tr("Нарушений за 90 дней:")}{" "}<AppText style={[s.num, fraud && { color: color.danger }]}>{r.penalties}</AppText>
+          {r.last_penalty_at ? tr(" · последнее {0}", fmt(r.last_penalty_at)) : ""}
         </AppText>
-        <AppText variant="caption">
-          Последняя активность: <AppText style={[s.num, !fraud && { color: color.warn }]}>{fmt(r.last_active_at)}</AppText>
+        <AppText variant="caption">{tr("Последняя активность:")}{" "}<AppText style={[s.num, !fraud && { color: color.warn }]}>{fmt(r.last_active_at)}</AppText>
         </AppText>
       </View>
-      <Button label="Удалить аккаунт" variant="danger" icon="trash-outline" onPress={confirm} loading={busy} style={{ marginTop: space.x3 }} />
+      <Button label={tr("Удалить аккаунт")} variant="danger" icon="trash-outline" onPress={confirm} loading={busy} style={{ marginTop: space.x3 }} />
     </Card>
   );
 }
@@ -112,23 +111,21 @@ export function AccountsReview() {
     <>
       <View style={s.rules}>
         <Icon name="information-circle-outline" size={18} color={color.muted} />
-        <AppText variant="caption" style={{ flex: 1 }}>
-          Сюда попадают аккаунты с 3 и более «Обманами» за 90 дней или без активности больше 6 месяцев. Модераторов здесь нет.
-        </AppText>
+        <AppText variant="caption" style={{ flex: 1 }}>{tr("Сюда попадают аккаунты с 3 и более «Обманами» за 90 дней или без активности больше 6 месяцев. Модераторов здесь нет.")}</AppText>
       </View>
       {loading && <SkeletonCard height={200} />}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && (
         <>
-          <SectionHeader title="Нарушители" hint={String(fraud.length)} action="Обновить" onAction={load} />
+          <SectionHeader title={tr("Нарушители")} hint={String(fraud.length)} action={tr("Обновить")} onAction={load} />
           {fraud.length === 0 ? (
-            <EmptyState icon="shield-checkmark-outline" title="Нарушителей нет" text="Аккаунты с тремя «Обманами» за 90 дней появятся здесь." />
+            <EmptyState icon="shield-checkmark-outline" title={tr("Нарушителей нет")} text={tr("Аккаунты с тремя «Обманами» за 90 дней появятся здесь.")} />
           ) : (
             fraud.map((r) => <AccountCard key={r.user_id} r={r} onDone={load} />)
           )}
-          <SectionHeader title="Неактивные" hint={String(inactive.length)} />
+          <SectionHeader title={tr("Неактивные")} hint={String(inactive.length)} />
           {inactive.length === 0 ? (
-            <EmptyState icon="moon-outline" title="Неактивных нет" text="Аккаунты без активности больше 6 месяцев появятся здесь." />
+            <EmptyState icon="moon-outline" title={tr("Неактивных нет")} text={tr("Аккаунты без активности больше 6 месяцев появятся здесь.")} />
           ) : (
             inactive.map((r) => <AccountCard key={r.user_id} r={r} onDone={load} />)
           )}

@@ -10,8 +10,9 @@ import { Screen } from "../../components/ui/screen";
 import { MAX_MESSAGE, chatError, messageTime, type ChatInfo, type ChatMessage } from "../../lib/chat";
 import { supabase } from "../../lib/supabase";
 import { color, font, radius, space } from "../../lib/theme";
+import { tr } from "../../lib/i18n";
 
-const REPORT_REASONS = ["Оскорбления или угрозы", "Неприличное содержание", "Спам или реклама", "Просит личные данные или встречу"];
+const REPORT_REASONS = [tr("Оскорбления или угрозы"), tr("Неприличное содержание"), tr("Спам или реклама"), tr("Просит личные данные или встречу")];
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function ChatScreen() {
         const msg: ChatMessage = {
           id: row.id,
           sender_id: row.sender_id,
-          sender_name: (row.sender_id && names.current[row.sender_id]) || "Участник",
+          sender_name: (row.sender_id && names.current[row.sender_id]) || tr("Участник"),
           body: row.deleted_at ? null : row.body,
           deleted: !!row.deleted_at,
           created_at: row.created_at,
@@ -103,7 +104,7 @@ export default function ChatScreen() {
     const { data, error } = await supabase.rpc("send_message", { p_conv: conv, p_body: body });
     setSending(false);
     if (error) {
-      Alert.alert("Не отправлено", chatError(error));
+      Alert.alert(tr("Не отправлено"), chatError(error));
       return;
     }
     setText("");
@@ -122,32 +123,32 @@ export default function ChatScreen() {
 
   const report = (m: ChatMessage) => {
     if (m.is_mine || m.deleted) return;
-    Alert.alert("Пожаловаться на сообщение?", "Модератор посмотрит его и несколько соседних сообщений.", [
+    Alert.alert(tr("Пожаловаться на сообщение?"), tr("Модератор посмотрит его и несколько соседних сообщений."), [
       ...REPORT_REASONS.map((r) => ({
         text: r,
         onPress: async () => {
           const { error } = await supabase.rpc("report_message", { p_message: m.id, p_reason: r });
-          Alert.alert(error ? "Не получилось" : "Жалоба отправлена", error ? chatError(error) : "Спасибо! Модератор проверит сообщение.");
+          Alert.alert(error ? tr("Не получилось") : tr("Жалоба отправлена"), error ? chatError(error) : tr("Спасибо! Модератор проверит сообщение."));
         },
       })),
-      { text: "Отмена", style: "cancel" as const },
+      { text: tr("Отмена"), style: "cancel" as const },
     ]);
   };
 
   const blocked = info?.blocked_by_me || info?.blocked_me;
   const group = info?.kind === "group";
   const other = info?.members.find((m) => !m.is_me);
-  const subtitle = group ? `${info?.members.length ?? 0} участн.` : info?.blocked_by_me ? "Вы заблокировали" : "Личный чат";
+  const subtitle = group ? tr("{0} участн.", info?.members.length ?? 0) : info?.blocked_by_me ? tr("Вы заблокировали") : tr("Личный чат");
 
   const footer = blocked ? (
     <AppText variant="caption" style={{ textAlign: "center", paddingVertical: space.x2 }}>
-      {info?.blocked_by_me ? "Вы заблокировали этого участника. Разблокировать можно в настройках чата." : "Этому участнику нельзя написать."}
+      {info?.blocked_by_me ? tr("Вы заблокировали этого участника. Разблокировать можно в настройках чата.") : tr("Этому участнику нельзя написать.")}
     </AppText>
   ) : (
     <View style={s.inputRow}>
       <TextInput
         style={s.input}
-        placeholder="Сообщение"
+        placeholder={tr("Сообщение")}
         placeholderTextColor={color.faint}
         cursorColor={color.forest}
         selectionColor={color.limeSoft}
@@ -193,9 +194,7 @@ export default function ChatScreen() {
       {loading && <ActivityIndicator color={color.forest} style={{ marginTop: space.x8 }} />}
       {!loading && error && <ErrorState onRetry={load} />}
       {!loading && !error && messages.length === 0 && (
-        <AppText variant="caption" style={s.empty}>
-          Напишите первое сообщение. Будьте вежливы: модератор видит сообщения, на которые пожаловались.
-        </AppText>
+        <AppText variant="caption" style={s.empty}>{tr("Напишите первое сообщение. Будьте вежливы: модератор видит сообщения, на которые пожаловались.")}</AppText>
       )}
       {!loading && !error && messages.length > 0 && (
         <FlatList
@@ -220,7 +219,7 @@ export default function ChatScreen() {
                 >
                   {showName ? <AppText style={s.sender}>{m.sender_name}</AppText> : null}
                   <AppText style={[s.body, m.is_mine && { color: color.onForest }, m.deleted && s.deletedText]}>
-                    {m.deleted ? "Сообщение удалено модератором" : m.body}
+                    {m.deleted ? tr("Сообщение удалено модератором") : m.body}
                   </AppText>
                   <AppText style={[s.time, m.is_mine && { color: color.onForestMuted }]}>{messageTime(m.created_at)}</AppText>
                 </Pressable>

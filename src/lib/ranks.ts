@@ -1,9 +1,10 @@
+import { tr } from "./i18n";
 export const RANKS = [
-  { min: 0, name: "Росток", icon: "🌱", next: 100 },
-  { min: 100, name: "Побег", icon: "🌿", next: 500 },
-  { min: 500, name: "Дерево", icon: "🌳", next: 1500 },
-  { min: 1500, name: "Страж природы", icon: "🏔", next: 5000 },
-  { min: 5000, name: "Хранитель степи", icon: "🦅", next: null as number | null },
+  { min: 0, name: tr("Росток"), icon: "🌱", next: 100 },
+  { min: 100, name: tr("Побег"), icon: "🌿", next: 500 },
+  { min: 500, name: tr("Дерево"), icon: "🌳", next: 1500 },
+  { min: 1500, name: tr("Страж природы"), icon: "🏔", next: 5000 },
+  { min: 5000, name: tr("Хранитель степи"), icon: "🦅", next: null as number | null },
 ];
 
 export function getRankIndex(points: number) {
